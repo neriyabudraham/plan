@@ -2,11 +2,11 @@ import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { query } from '../db/pool.js';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
-import { AuthRequest, User, UserRole } from '../types/index.js';
-import { generateToken } from '../utils/helpers.js';
-import { sendInvitationEmail, sendWelcomeEmail } from '../services/email.js';
+import { query } from '../db/pool';
+import { authenticate, requireAdmin } from '../middleware/auth';
+import { AuthRequest, User, UserRole } from '../types/index';
+import { generateToken } from '../utils/helpers';
+import { sendInvitationEmail, sendWelcomeEmail } from '../services/email';
 
 const router = Router();
 

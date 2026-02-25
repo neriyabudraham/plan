@@ -1,11 +1,11 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { query } from '../db/pool.js';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
-import { AuthRequest, WhatsAppSettings } from '../types/index.js';
-import { fetchWhatsAppGroups, sendWhatsAppMessage } from '../services/whatsapp.js';
-import { formatPhoneNumber, isValidPhoneNumber } from '../utils/phoneFormatter.js';
+import { query } from '../db/pool';
+import { authenticate, requireAdmin } from '../middleware/auth';
+import { AuthRequest, WhatsAppSettings } from '../types/index';
+import { fetchWhatsAppGroups, sendWhatsAppMessage } from '../services/whatsapp';
+import { formatPhoneNumber, isValidPhoneNumber } from '../utils/phoneFormatter';
 
 const router = Router();
 

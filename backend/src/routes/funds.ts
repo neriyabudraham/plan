@@ -1,9 +1,9 @@
 import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { query } from '../db/pool.js';
-import { authenticate, requireEditorOrAdmin } from '../middleware/auth.js';
-import { AuthRequest, Fund } from '../types/index.js';
+import { query } from '../db/pool';
+import { authenticate, requireEditorOrAdmin } from '../middleware/auth';
+import { AuthRequest, Fund } from '../types/index';
 
 const router = Router();
 

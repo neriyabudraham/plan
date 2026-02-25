@@ -1,6 +1,6 @@
-import { pool } from './pool.js';
+import { pool } from './pool';
 import bcrypt from 'bcryptjs';
-import { config } from '../config/index.js';
+import { config } from '../config/index';
 import { v4 as uuidv4 } from 'uuid';
 
 const initDatabase = async () => {

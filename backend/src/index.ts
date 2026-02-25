@@ -3,16 +3,16 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
-import { config } from './config/index.js';
+import { config } from './config/index';
 
 // Routes
-import authRoutes from './routes/auth.js';
-import userRoutes from './routes/users.js';
-import fundRoutes from './routes/funds.js';
-import transactionRoutes from './routes/transactions.js';
-import whatsappRoutes from './routes/whatsapp.js';
-import dashboardRoutes from './routes/dashboard.js';
-import recurringRoutes from './routes/recurring.js';
+import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
+import fundRoutes from './routes/funds';
+import transactionRoutes from './routes/transactions';
+import whatsappRoutes from './routes/whatsapp';
+import dashboardRoutes from './routes/dashboard';
+import recurringRoutes from './routes/recurring';
 
 const __dirname = path.resolve();
 

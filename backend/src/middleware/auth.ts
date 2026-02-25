@@ -1,8 +1,8 @@
 import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { config } from '../config/index.js';
-import { query } from '../db/pool.js';
-import { AuthRequest, TokenPayload, User, UserRole } from '../types/index.js';
+import { config } from '../config/index';
+import { query } from '../db/pool';
+import { AuthRequest, TokenPayload, User, UserRole } from '../types/index';
 
 export const authenticate = async (
   req: AuthRequest,

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "PlanIt - Family Investment & Savings Management",
   "main": "dist/index.js",
+  "type": "commonjs",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",

@@ -1,11 +1,11 @@
 import { Router, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { query } from '../db/pool.js';
-import { authenticate, requireEditorOrAdmin } from '../middleware/auth.js';
-import { AuthRequest, Transaction, Fund } from '../types/index.js';
-import { notifyDeposit, notifyWithdrawal, notifyTargetReached, notifyMilestone } from '../services/whatsapp.js';
-import { getMilestones } from '../utils/helpers.js';
+import { query } from '../db/pool';
+import { authenticate, requireEditorOrAdmin } from '../middleware/auth';
+import { AuthRequest, Transaction, Fund } from '../types/index';
+import { notifyDeposit, notifyWithdrawal, notifyTargetReached, notifyMilestone } from '../services/whatsapp';
+import { getMilestones } from '../utils/helpers';
 
 const router = Router();
 

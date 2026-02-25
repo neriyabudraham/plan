@@ -3,12 +3,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { config } from '../config/index.js';
-import { query } from '../db/pool.js';
-import { authenticate } from '../middleware/auth.js';
-import { AuthRequest, User, TokenPayload } from '../types/index.js';
-import { generateToken } from '../utils/helpers.js';
-import { sendPasswordResetEmail } from '../services/email.js';
+import { config } from '../config/index';
+import { query } from '../db/pool';
+import { authenticate } from '../middleware/auth';
+import { AuthRequest, User, TokenPayload } from '../types/index';
+import { generateToken } from '../utils/helpers';
+import { sendPasswordResetEmail } from '../services/email';
 
 const router = Router();
 

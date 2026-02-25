@@ -1,6 +1,6 @@
-import { query } from '../db/pool.js';
-import { WhatsAppSettings, WhatsAppGroup } from '../types/index.js';
-import { config } from '../config/index.js';
+import { query } from '../db/pool';
+import { WhatsAppSettings, WhatsAppGroup } from '../types/index';
+import { config } from '../config/index';
 
 export const getWhatsAppSettings = async (): Promise<WhatsAppSettings | null> => {
   const result = await query<WhatsAppSettings>(

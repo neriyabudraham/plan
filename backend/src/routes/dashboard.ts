@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
-import { query } from '../db/pool.js';
-import { authenticate } from '../middleware/auth.js';
-import { AuthRequest, DashboardStats, FundProgress } from '../types/index.js';
+import { query } from '../db/pool';
+import { authenticate } from '../middleware/auth';
+import { AuthRequest, DashboardStats, FundProgress } from '../types/index';
 
 const router = Router();
 
