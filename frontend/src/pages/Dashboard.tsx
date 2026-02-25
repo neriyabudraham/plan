@@ -8,8 +8,6 @@ import {
   PlusIcon,
 } from '@heroicons/react/24/outline';
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
