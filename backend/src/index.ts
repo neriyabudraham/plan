@@ -59,7 +59,7 @@ app.get('/api/health', (_req, res) => {
 
 // Serve static files in production
 if (config.nodeEnv === 'production') {
-  const publicPath = path.join(__dirname, 'public');
+  const publicPath = path.join(__dirname, '..', 'public');
   app.use(express.static(publicPath));
   
   // SPA fallback
