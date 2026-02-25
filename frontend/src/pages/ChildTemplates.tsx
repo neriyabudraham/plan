@@ -3,7 +3,7 @@ import { PlusIcon, PencilIcon, TrashIcon, DocumentDuplicateIcon, StarIcon } from
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import api, { handleApiError } from '../services/api';
-import { ChildExpenseTemplate, ChildExpenseItem, TRIGGER_TYPE_LABELS, FREQUENCY_LABELS } from '../types';
+import { ChildExpenseTemplate, ChildExpenseItem, ExpenseTriggerType, FrequencyType, TRIGGER_TYPE_LABELS, FREQUENCY_LABELS } from '../types';
 import Loading from '../components/common/Loading';
 import Modal from '../components/common/Modal';
 
@@ -16,13 +16,21 @@ export default function ChildTemplates() {
   const [editingItem, setEditingItem] = useState<ChildExpenseItem | null>(null);
   
   const [templateForm, setTemplateForm] = useState({ name: '', description: '' });
-  const [itemForm, setItemForm] = useState({
+  const [itemForm, setItemForm] = useState<{
+    name: string;
+    trigger_type: ExpenseTriggerType;
+    trigger_value: number;
+    trigger_value_end: number | undefined;
+    amount: number;
+    frequency: FrequencyType;
+    notes: string;
+  }>({
     name: '',
-    trigger_type: 'age_years' as const,
+    trigger_type: 'age_years',
     trigger_value: 0,
-    trigger_value_end: undefined as number | undefined,
+    trigger_value_end: undefined,
     amount: 0,
-    frequency: 'once' as const,
+    frequency: 'once',
     notes: '',
   });
   

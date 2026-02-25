@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 import api, { handleApiError } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import Loading from '../components/common/Loading';
 
 export default function Settings() {
   const { user } = useAuthStore();

@@ -22,6 +22,8 @@ export interface User {
   role: UserRole;
   avatar?: string;
   must_change_password?: boolean;
+  is_active?: boolean;
+  last_login?: string;
   created_at: string;
 }
 
@@ -30,6 +32,51 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   mustChangePassword?: boolean;
+}
+
+// Legacy types for backward compatibility
+export interface Fund {
+  id: string;
+  name: string;
+  description?: string;
+  target_amount: number;
+  current_balance: number;
+  currency: string;
+  icon: string;
+  color: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Transaction {
+  id: string;
+  fund_id: string;
+  amount: number;
+  type: 'deposit' | 'withdrawal' | 'interest' | 'fee';
+  description?: string;
+  transaction_date: string;
+  fund_name?: string;
+  fund_icon?: string;
+  fund_color?: string;
+  fund_currency?: string;
+}
+
+export interface RecurringDeposit {
+  id: string;
+  fund_id: string;
+  amount: number;
+  frequency: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  day_of_month?: number;
+  description?: string;
+  is_active: boolean;
+  next_run: string;
+  fund_name?: string;
+  fund_icon?: string;
+}
+
+export interface HistoryPoint {
+  date: string;
+  balance: number;
 }
 
 // ============================================

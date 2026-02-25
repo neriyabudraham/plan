@@ -3,10 +3,10 @@ import { PlayIcon, BookmarkIcon, AdjustmentsHorizontalIcon } from '@heroicons/re
 import { BookmarkIcon as BookmarkSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import {
-  LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine
+  Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import api, { handleApiError } from '../services/api';
-import { SimulationParams, SimulationResults, SimulationScenario, FamilyMember, Asset } from '../types';
+import { SimulationParams, SimulationResults, SimulationScenario, FamilyMember } from '../types';
 import Loading from '../components/common/Loading';
 import Modal from '../components/common/Modal';
 
@@ -16,7 +16,6 @@ export default function Simulator() {
   const [results, setResults] = useState<SimulationResults | null>(null);
   const [scenarios, setScenarios] = useState<SimulationScenario[]>([]);
   const [members, setMembers] = useState<FamilyMember[]>([]);
-  const [assets, setAssets] = useState<Asset[]>([]);
   const [isParamsOpen, setIsParamsOpen] = useState(false);
   const [isSaveOpen, setIsSaveOpen] = useState(false);
   
@@ -39,14 +38,12 @@ export default function Simulator() {
   
   const fetchInitialData = async () => {
     try {
-      const [scenariosRes, membersRes, assetsRes] = await Promise.all([
+      const [scenariosRes, membersRes] = await Promise.all([
         api.get<SimulationScenario[]>('/simulation/scenarios'),
         api.get<FamilyMember[]>('/family/members'),
-        api.get<Asset[]>('/assets'),
       ]);
       setScenarios(scenariosRes.data);
       setMembers(membersRes.data);
-      setAssets(assetsRes.data);
       
       // Set default target member to self
       const self = membersRes.data.find(m => m.member_type === 'self');

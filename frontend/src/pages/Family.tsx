@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { PlusIcon, PencilIcon, TrashIcon, UserIcon, HeartIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api, { handleApiError } from '../services/api';
-import { FamilyMember, FamilySummary, FamilySettings, FamilyMemberType, GenderType, MEMBER_TYPE_LABELS, GENDER_LABELS } from '../types';
+import { FamilyMember, FamilySummary, FamilySettings, FamilyMemberType, GenderType, GENDER_LABELS } from '../types';
 import Loading from '../components/common/Loading';
 import Modal from '../components/common/Modal';
 

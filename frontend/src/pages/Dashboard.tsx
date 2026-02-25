@@ -9,16 +9,11 @@ import {
   PlusIcon,
 } from '@heroicons/react/24/outline';
 import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
-  AreaChart,
-  Area,
 } from 'recharts';
 import toast from 'react-hot-toast';
 import api, { handleApiError } from '../services/api';
