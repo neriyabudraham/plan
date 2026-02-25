@@ -46,6 +46,8 @@ export interface Fund {
   color: string;
   is_active: boolean;
   created_at: string;
+  target_date?: string;
+  progress_percent?: number;
 }
 
 export interface Transaction {
@@ -65,13 +67,15 @@ export interface RecurringDeposit {
   id: string;
   fund_id: string;
   amount: number;
-  frequency: 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
   day_of_month?: number;
+  day_of_week?: number;
   description?: string;
   is_active: boolean;
   next_run: string;
   fund_name?: string;
   fund_icon?: string;
+  fund_color?: string;
 }
 
 export interface HistoryPoint {
