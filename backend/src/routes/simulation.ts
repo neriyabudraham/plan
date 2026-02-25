@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../db/pool';
 import { authenticate } from '../middleware/auth';
-import { AuthRequest, SimulationScenario, SimulationParams, SimulationResults, TimelinePoint, Asset, FamilyMember, ChildExpenseItem, FinancialGoal } from '../types/index';
+import { AuthRequest, SimulationScenario, SimulationParams, SimulationResults, TimelinePoint, Asset, FamilyMember, ChildExpenseItem, FinancialGoal, IncomeRecord } from '../types/index';
 
 const router = Router();
 
@@ -52,10 +52,29 @@ interface SimulationContext {
   childExpenseItems: { child_id: string; items: ChildExpenseItem[] }[];
   goals: FinancialGoal[];
   inflationRate: number;
+  incomeHistory: { member_id: string; records: IncomeRecord[] }[];
+}
+
+// Get income for a specific date
+function getIncomeAtDate(incomeHistory: { member_id: string; records: IncomeRecord[] }[], targetDate: Date): number {
+  let totalIncome = 0;
+  
+  for (const memberIncome of incomeHistory) {
+    // Find the most recent income record before or on targetDate
+    const relevantRecord = memberIncome.records
+      .filter(r => new Date(r.effective_date) <= targetDate)
+      .sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())[0];
+    
+    if (relevantRecord) {
+      totalIncome += Number(relevantRecord.amount);
+    }
+  }
+  
+  return totalIncome;
 }
 
 async function runSimulation(ctx: SimulationContext): Promise<SimulationResults> {
-  const { params, assets, familyMembers, childExpenseItems, goals, inflationRate } = ctx;
+  const { params, assets, familyMembers, childExpenseItems, goals, inflationRate, incomeHistory } = ctx;
   
   const startDate = new Date(params.start_date);
   let endDate: Date;
@@ -240,6 +259,10 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
     
     // Record at first day of each month
     if (currentDate.getDate() === 1 || currentDate.getTime() === startDate.getTime()) {
+      // Calculate monthly income at this date (with inflation adjustment)
+      const baseMonthlyIncome = getIncomeAtDate(incomeHistory, currentDate);
+      const adjustedMonthlyIncome = baseMonthlyIncome * inflationFactor;
+      
       timeline.push({
         date: dateStr,
         total_assets: Math.round(totalAssets),
@@ -248,6 +271,7 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
         total_returns: Math.round(totalReturns),
         total_fees: Math.round(totalFees),
         total_child_expenses: Math.round(totalChildExpenses),
+        monthly_income: Math.round(adjustedMonthlyIncome),
         assets_breakdown: Object.fromEntries(
           Object.entries(assetBalances).map(([id, bal]) => [id, Math.round(bal)])
         ),
@@ -332,6 +356,22 @@ router.post('/run', authenticate, async (req: AuthRequest, res: Response) => {
       query('SELECT * FROM family_settings WHERE user_id = $1', [req.user!.id]),
     ]);
     
+    // Get income history for members with income (self, spouse)
+    const incomeMembers = membersResult.rows.filter(m => 
+      m.member_type === 'self' || m.member_type === 'spouse'
+    );
+    
+    const incomeHistory: { member_id: string; records: IncomeRecord[] }[] = [];
+    for (const member of incomeMembers) {
+      const incomeRecords = await query<IncomeRecord>(
+        'SELECT * FROM income_history WHERE member_id = $1 ORDER BY effective_date DESC',
+        [member.id]
+      );
+      if (incomeRecords.rows.length > 0) {
+        incomeHistory.push({ member_id: member.id, records: incomeRecords.rows });
+      }
+    }
+    
     // Get child expense items
     const children = membersResult.rows.filter(m => 
       m.member_type === 'child' || (params.include_planned_children && m.member_type === 'planned_child')
@@ -381,6 +421,7 @@ router.post('/run', authenticate, async (req: AuthRequest, res: Response) => {
       childExpenseItems,
       goals: goalsResult.rows,
       inflationRate,
+      incomeHistory,
     });
     
     res.json(results);

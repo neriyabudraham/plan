@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { PlusIcon, PencilIcon, TrashIcon, UserIcon, HeartIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, TrashIcon, UserIcon, HeartIcon, SparklesIcon, BanknotesIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api, { handleApiError } from '../services/api';
-import { FamilyMember, FamilySummary, FamilySettings, FamilyMemberType, GenderType, GENDER_LABELS } from '../types';
+import { FamilyMember, FamilySummary, FamilySettings, FamilyMemberType, GenderType, GENDER_LABELS, IncomeRecord } from '../types';
 import Loading from '../components/common/Loading';
 import Modal from '../components/common/Modal';
 
@@ -14,13 +14,23 @@ export default function Family() {
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
+  // Income history state
+  const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
+  const [selectedMemberForIncome, setSelectedMemberForIncome] = useState<FamilyMember | null>(null);
+  const [incomeHistory, setIncomeHistory] = useState<IncomeRecord[]>([]);
+  const [loadingIncome, setLoadingIncome] = useState(false);
+  const [incomeForm, setIncomeForm] = useState({
+    amount: 0,
+    effective_date: new Date().toISOString().split('T')[0],
+    description: '',
+  });
+  
   const [form, setForm] = useState({
     member_type: 'child' as FamilyMemberType,
     name: '',
     gender: '' as GenderType | '',
     birth_date: '',
     expected_birth_date: '',
-    monthly_income: 0,
     notes: '',
   });
   
@@ -62,7 +72,6 @@ export default function Family() {
       gender: '',
       birth_date: '',
       expected_birth_date: '',
-      monthly_income: 0,
       notes: '',
     });
     setIsModalOpen(true);
@@ -76,10 +85,74 @@ export default function Family() {
       gender: member.gender || '',
       birth_date: member.birth_date?.split('T')[0] || '',
       expected_birth_date: member.expected_birth_date?.split('T')[0] || '',
-      monthly_income: member.monthly_income,
       notes: member.notes || '',
     });
     setIsModalOpen(true);
+  };
+  
+  // Income management
+  const openIncomeModal = async (member: FamilyMember) => {
+    setSelectedMemberForIncome(member);
+    setIsIncomeModalOpen(true);
+    setLoadingIncome(true);
+    setIncomeForm({
+      amount: 0,
+      effective_date: new Date().toISOString().split('T')[0],
+      description: '',
+    });
+    
+    try {
+      const res = await api.get<IncomeRecord[]>(`/family/members/${member.id}/income`);
+      setIncomeHistory(res.data);
+    } catch (error) {
+      toast.error(handleApiError(error));
+    } finally {
+      setLoadingIncome(false);
+    }
+  };
+  
+  const handleAddIncome = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMemberForIncome) return;
+    
+    try {
+      await api.post(`/family/members/${selectedMemberForIncome.id}/income`, incomeForm);
+      toast.success('הכנסה נוספה בהצלחה');
+      
+      // Refresh income history
+      const res = await api.get<IncomeRecord[]>(`/family/members/${selectedMemberForIncome.id}/income`);
+      setIncomeHistory(res.data);
+      
+      // Reset form
+      setIncomeForm({
+        amount: 0,
+        effective_date: new Date().toISOString().split('T')[0],
+        description: '',
+      });
+      
+      // Refresh main data to update summary
+      fetchData();
+    } catch (error) {
+      toast.error(handleApiError(error));
+    }
+  };
+  
+  const handleDeleteIncome = async (incomeId: string) => {
+    if (!confirm('האם למחוק רשומה זו?')) return;
+    
+    try {
+      await api.delete(`/family/income/${incomeId}`);
+      toast.success('נמחק בהצלחה');
+      
+      // Refresh
+      if (selectedMemberForIncome) {
+        const res = await api.get<IncomeRecord[]>(`/family/members/${selectedMemberForIncome.id}/income`);
+        setIncomeHistory(res.data);
+      }
+      fetchData();
+    } catch (error) {
+      toast.error(handleApiError(error));
+    }
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -196,7 +269,13 @@ export default function Family() {
           </div>
           
           {summary?.self ? (
-            <MemberCard member={summary.self} onEdit={openEditModal} onDelete={handleDelete} />
+            <MemberCard 
+              member={summary.self} 
+              onEdit={openEditModal} 
+              onDelete={handleDelete}
+              onManageIncome={openIncomeModal}
+              showIncomeButton={true}
+            />
           ) : (
             <p className="text-gray-500 text-center py-8">לא הוגדר עדיין</p>
           )}
@@ -218,7 +297,13 @@ export default function Family() {
           </div>
           
           {summary?.spouse ? (
-            <MemberCard member={summary.spouse} onEdit={openEditModal} onDelete={handleDelete} />
+            <MemberCard 
+              member={summary.spouse} 
+              onEdit={openEditModal} 
+              onDelete={handleDelete}
+              onManageIncome={openIncomeModal}
+              showIncomeButton={true}
+            />
           ) : (
             <p className="text-gray-500 text-center py-8">לא הוגדר עדיין</p>
           )}
@@ -320,19 +405,6 @@ export default function Family() {
             </div>
           )}
           
-          {(form.member_type === 'self' || form.member_type === 'spouse') && (
-            <div>
-              <label className="label">הכנסה חודשית</label>
-              <input
-                type="number"
-                value={form.monthly_income}
-                onChange={e => setForm({...form, monthly_income: Number(e.target.value)})}
-                className="input"
-                min="0"
-              />
-            </div>
-          )}
-          
           <div>
             <label className="label">הערות</label>
             <textarea
@@ -402,6 +474,111 @@ export default function Family() {
           </div>
         </form>
       </Modal>
+      
+      {/* Income History Modal */}
+      <Modal 
+        isOpen={isIncomeModalOpen} 
+        onClose={() => setIsIncomeModalOpen(false)} 
+        title={`היסטוריית הכנסות - ${selectedMemberForIncome?.name || ''}`}
+      >
+        <div className="space-y-6">
+          {/* Add new income form */}
+          <form onSubmit={handleAddIncome} className="p-4 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-xl space-y-4">
+            <h3 className="font-semibold text-gray-900 dark:text-white">הוספת הכנסה חדשה</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">סכום חודשי</label>
+                <input
+                  type="number"
+                  value={incomeForm.amount}
+                  onChange={e => setIncomeForm({...incomeForm, amount: Number(e.target.value)})}
+                  className="input"
+                  min="0"
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">תאריך תחילה</label>
+                <input
+                  type="date"
+                  value={incomeForm.effective_date}
+                  onChange={e => setIncomeForm({...incomeForm, effective_date: e.target.value})}
+                  className="input"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="label">תיאור (אופציונלי)</label>
+              <input
+                type="text"
+                value={incomeForm.description}
+                onChange={e => setIncomeForm({...incomeForm, description: e.target.value})}
+                className="input"
+                placeholder="לדוגמה: העלאת שכר, מעבר למשרה חדשה..."
+              />
+            </div>
+            
+            <button type="submit" className="btn-primary w-full">
+              <PlusIcon className="w-5 h-5 ml-1" />
+              הוסף
+            </button>
+          </form>
+          
+          {/* Income history list */}
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-3">היסטוריה</h3>
+            
+            {loadingIncome ? (
+              <div className="text-center py-4">
+                <div className="animate-spin h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full mx-auto"></div>
+              </div>
+            ) : incomeHistory.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">אין היסטוריית הכנסות</p>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {incomeHistory.map((income, index) => (
+                  <div 
+                    key={income.id} 
+                    className={`flex items-center justify-between p-3 rounded-lg ${
+                      index === 0 
+                        ? 'bg-emerald-100 dark:bg-emerald-900/30 border-2 border-emerald-300 dark:border-emerald-700' 
+                        : 'bg-gray-100 dark:bg-gray-800'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
+                          ₪{Number(income.amount).toLocaleString()}
+                        </span>
+                        {index === 0 && (
+                          <span className="text-xs bg-emerald-500 text-white px-2 py-0.5 rounded-full">
+                            נוכחי
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        מתאריך: {new Date(income.effective_date).toLocaleDateString('he-IL')}
+                      </p>
+                      {income.description && (
+                        <p className="text-sm text-gray-600 dark:text-gray-300">{income.description}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleDeleteIncome(income.id)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -410,12 +587,16 @@ function MemberCard({
   member, 
   onEdit, 
   onDelete,
-  isPlanned = false 
+  onManageIncome,
+  isPlanned = false,
+  showIncomeButton = false,
 }: { 
   member: FamilyMember; 
   onEdit: (m: FamilyMember) => void; 
   onDelete: (id: string) => void;
+  onManageIncome?: (m: FamilyMember) => void;
   isPlanned?: boolean;
+  showIncomeButton?: boolean;
 }) {
   const getAge = () => {
     if (member.age_years !== undefined && member.age_years !== null) {
@@ -430,7 +611,7 @@ function MemberCard({
   return (
     <div className={`p-4 rounded-xl border ${isPlanned ? 'border-purple-200 bg-purple-50/50 dark:border-purple-800 dark:bg-purple-900/20' : 'border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/50'}`}>
       <div className="flex items-start justify-between">
-        <div>
+        <div className="flex-1">
           <h3 className="font-semibold text-gray-900 dark:text-white">{member.name}</h3>
           {getAge() && (
             <p className="text-sm text-gray-500 dark:text-gray-400">גיל: {getAge()}</p>
@@ -443,10 +624,21 @@ function MemberCard({
           {member.gender && (
             <p className="text-sm text-gray-500 dark:text-gray-400">{GENDER_LABELS[member.gender]}</p>
           )}
-          {member.monthly_income > 0 && (
-            <p className="text-sm text-emerald-600 dark:text-emerald-400">
-              הכנסה: ₪{member.monthly_income.toLocaleString()}
+          {member.monthly_income !== undefined && member.monthly_income > 0 && (
+            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+              הכנסה נוכחית: ₪{member.monthly_income.toLocaleString()}
             </p>
+          )}
+          
+          {/* Income management button */}
+          {showIncomeButton && onManageIncome && (
+            <button
+              onClick={() => onManageIncome(member)}
+              className="mt-2 flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+            >
+              <BanknotesIcon className="w-4 h-4" />
+              ניהול הכנסות
+            </button>
           )}
         </div>
         <div className="flex gap-1">

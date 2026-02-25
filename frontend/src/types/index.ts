@@ -103,12 +103,21 @@ export interface FamilyMember {
   gender?: GenderType;
   birth_date?: string;
   expected_birth_date?: string;
-  monthly_income: number;
+  monthly_income?: number;
   notes?: string;
   is_active: boolean;
   created_at: string;
   age_years?: number;
   age_months?: number;
+}
+
+export interface IncomeRecord {
+  id: string;
+  member_id: string;
+  amount: number;
+  effective_date: string;
+  description?: string;
+  created_at: string;
 }
 
 export interface FamilySummary {
@@ -310,6 +319,7 @@ export interface TimelinePoint {
   total_returns: number;
   total_fees: number;
   total_child_expenses: number;
+  monthly_income: number;
   assets_breakdown: Record<string, number>;
   events: string[];
 }

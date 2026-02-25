@@ -23,8 +23,13 @@ const familyMemberSchema = z.object({
   gender: z.enum(['male', 'female']).optional(),
   birth_date: z.string().optional(),
   expected_birth_date: z.string().optional(),
-  monthly_income: z.number().min(0).default(0),
   notes: z.string().optional(),
+});
+
+const incomeSchema = z.object({
+  amount: z.number().min(0, 'סכום חייב להיות חיובי'),
+  effective_date: z.string(),
+  description: z.string().optional(),
 });
 
 // ============================================
@@ -91,27 +96,32 @@ router.put('/settings', authenticate, async (req: AuthRequest, res: Response) =>
 router.get('/members', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const result = await query<FamilyMember>(
-      `SELECT *,
+      `SELECT fm.*,
         CASE 
-          WHEN birth_date IS NOT NULL THEN 
-            EXTRACT(YEAR FROM AGE(NOW(), birth_date))::INTEGER
+          WHEN fm.birth_date IS NOT NULL THEN 
+            EXTRACT(YEAR FROM AGE(NOW(), fm.birth_date))::INTEGER
           ELSE NULL
         END as age_years,
         CASE 
-          WHEN birth_date IS NOT NULL THEN 
-            (EXTRACT(YEAR FROM AGE(NOW(), birth_date)) * 12 + EXTRACT(MONTH FROM AGE(NOW(), birth_date)))::INTEGER
+          WHEN fm.birth_date IS NOT NULL THEN 
+            (EXTRACT(YEAR FROM AGE(NOW(), fm.birth_date)) * 12 + EXTRACT(MONTH FROM AGE(NOW(), fm.birth_date)))::INTEGER
           ELSE NULL
-        END as age_months
-       FROM family_members 
-       WHERE user_id = $1 AND is_active = true
+        END as age_months,
+        COALESCE((
+          SELECT ih.amount FROM income_history ih 
+          WHERE ih.member_id = fm.id AND ih.effective_date <= CURRENT_DATE 
+          ORDER BY ih.effective_date DESC LIMIT 1
+        ), 0) as monthly_income
+       FROM family_members fm
+       WHERE fm.user_id = $1 AND fm.is_active = true
        ORDER BY 
-         CASE member_type 
+         CASE fm.member_type 
            WHEN 'self' THEN 1 
            WHEN 'spouse' THEN 2 
            WHEN 'child' THEN 3 
            WHEN 'planned_child' THEN 4 
          END,
-         birth_date ASC NULLS LAST`,
+         fm.birth_date ASC NULLS LAST`,
       [req.user!.id]
     );
     
@@ -296,18 +306,146 @@ router.post('/members/:id/born', authenticate, async (req: AuthRequest, res: Res
   }
 });
 
+// ============================================
+// INCOME HISTORY
+// ============================================
+
+// Get income history for a member
+router.get('/members/:id/income', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    // Verify member belongs to user
+    const member = await query(
+      'SELECT id FROM family_members WHERE id = $1 AND user_id = $2',
+      [req.params.id, req.user!.id]
+    );
+    
+    if (member.rows.length === 0) {
+      return res.status(404).json({ error: 'לא נמצא' });
+    }
+    
+    const result = await query(
+      `SELECT * FROM income_history 
+       WHERE member_id = $1 
+       ORDER BY effective_date DESC`,
+      [req.params.id]
+    );
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get income history error:', error);
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
+// Add income record
+router.post('/members/:id/income', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const data = incomeSchema.parse(req.body);
+    
+    // Verify member belongs to user
+    const member = await query(
+      'SELECT id FROM family_members WHERE id = $1 AND user_id = $2',
+      [req.params.id, req.user!.id]
+    );
+    
+    if (member.rows.length === 0) {
+      return res.status(404).json({ error: 'לא נמצא' });
+    }
+    
+    const result = await query(
+      `INSERT INTO income_history (id, member_id, amount, effective_date, description)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [uuidv4(), req.params.id, data.amount, data.effective_date, data.description]
+    );
+    
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+    console.error('Add income error:', error);
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
+// Update income record
+router.put('/income/:incomeId', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const data = incomeSchema.partial().parse(req.body);
+    
+    // Verify ownership through member
+    const existing = await query(
+      `SELECT ih.id FROM income_history ih
+       JOIN family_members fm ON ih.member_id = fm.id
+       WHERE ih.id = $1 AND fm.user_id = $2`,
+      [req.params.incomeId, req.user!.id]
+    );
+    
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'לא נמצא' });
+    }
+    
+    const result = await query(
+      `UPDATE income_history SET
+        amount = COALESCE($1, amount),
+        effective_date = COALESCE($2, effective_date),
+        description = COALESCE($3, description)
+       WHERE id = $4
+       RETURNING *`,
+      [data.amount, data.effective_date, data.description, req.params.incomeId]
+    );
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+    console.error('Update income error:', error);
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
+// Delete income record
+router.delete('/income/:incomeId', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    // Verify ownership
+    const result = await query(
+      `DELETE FROM income_history ih
+       USING family_members fm
+       WHERE ih.id = $1 AND ih.member_id = fm.id AND fm.user_id = $2
+       RETURNING ih.id`,
+      [req.params.incomeId, req.user!.id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'לא נמצא' });
+    }
+    
+    res.json({ message: 'נמחק בהצלחה' });
+  } catch (error) {
+    console.error('Delete income error:', error);
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
 // Get family summary (for dashboard)
 router.get('/summary', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const members = await query<FamilyMember>(
-      `SELECT *,
+      `SELECT fm.*,
         CASE 
-          WHEN birth_date IS NOT NULL THEN 
-            EXTRACT(YEAR FROM AGE(NOW(), birth_date))::INTEGER
+          WHEN fm.birth_date IS NOT NULL THEN 
+            EXTRACT(YEAR FROM AGE(NOW(), fm.birth_date))::INTEGER
           ELSE NULL
-        END as age_years
-       FROM family_members 
-       WHERE user_id = $1 AND is_active = true`,
+        END as age_years,
+        COALESCE((
+          SELECT ih.amount FROM income_history ih 
+          WHERE ih.member_id = fm.id AND ih.effective_date <= CURRENT_DATE 
+          ORDER BY ih.effective_date DESC LIMIT 1
+        ), 0) as monthly_income
+       FROM family_members fm
+       WHERE fm.user_id = $1 AND fm.is_active = true`,
       [req.user!.id]
     );
     

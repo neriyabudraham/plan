@@ -138,13 +138,30 @@ const initDatabase = async () => {
         gender gender_type,
         birth_date DATE,
         expected_birth_date DATE,
-        monthly_income DECIMAL(15,2) DEFAULT 0,
         notes TEXT,
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+
+    // ============================================
+    // INCOME HISTORY - היסטוריית הכנסות
+    // ============================================
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS income_history (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        member_id UUID REFERENCES family_members(id) ON DELETE CASCADE,
+        amount DECIMAL(15,2) NOT NULL,
+        effective_date DATE NOT NULL,
+        description TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_income_history_member_id ON income_history(member_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_income_history_effective_date ON income_history(effective_date);`);
 
     // ============================================
     // CHILD EXPENSE TEMPLATES - תבניות עלויות ילד
