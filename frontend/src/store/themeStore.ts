@@ -11,7 +11,7 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      theme: 'dark',
+      theme: 'light',
       setTheme: (theme) => {
         set({ theme });
         applyTheme(theme);
@@ -42,10 +42,10 @@ const savedTheme = localStorage.getItem('planit-theme');
 if (savedTheme) {
   try {
     const { state } = JSON.parse(savedTheme);
-    applyTheme(state.theme || 'dark');
+    applyTheme(state.theme || 'light');
   } catch {
-    applyTheme('dark');
+    applyTheme('light');
   }
 } else {
-  applyTheme('dark');
+  applyTheme('light');
 }
