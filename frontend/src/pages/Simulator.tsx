@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { PlayIcon, BookmarkIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
+import { PlayIcon, BookmarkIcon, AdjustmentsHorizontalIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import {
   Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import api, { handleApiError } from '../services/api';
-import { SimulationParams, SimulationResults, SimulationScenario, FamilyMember } from '../types';
+import { SimulationParams, SimulationResults, SimulationScenario, FamilyMember, YearlyExpense } from '../types';
 import Loading from '../components/common/Loading';
 import Modal from '../components/common/Modal';
+import NumberInput from '../components/common/NumberInput';
 
 export default function Simulator() {
   const [loading, setLoading] = useState(true);
@@ -18,20 +19,20 @@ export default function Simulator() {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [isParamsOpen, setIsParamsOpen] = useState(false);
   const [isSaveOpen, setIsSaveOpen] = useState(false);
+  const [showReal, setShowReal] = useState(false);
   
   const [params, setParams] = useState<SimulationParams>({
     start_date: new Date().toISOString().split('T')[0],
     end_age: 67,
-    target_member_id: '',
     inflation_rate: 2.5,
     include_planned_children: true,
     extra_monthly_deposit: 0,
+    yearly_expenses: [],
     extra_deposits: [],
     withdrawal_events: [],
   });
   
   const [saveName, setSaveName] = useState('');
-  const [showReal, setShowReal] = useState(false); // Toggle between nominal and real values
   
   useEffect(() => {
     fetchInitialData();
@@ -45,12 +46,6 @@ export default function Simulator() {
       ]);
       setScenarios(scenariosRes.data);
       setMembers(membersRes.data);
-      
-      // Set default target member to self
-      const self = membersRes.data.find(m => m.member_type === 'self');
-      if (self) {
-        setParams(p => ({ ...p, target_member_id: self.id }));
-      }
     } catch (error) {
       toast.error(handleApiError(error));
     } finally {
@@ -76,7 +71,6 @@ export default function Simulator() {
     if (scenario.results) {
       setResults(scenario.results);
     } else {
-      // Run the scenario
       setRunning(true);
       try {
         const res = await api.post<SimulationResults>(`/simulation/scenarios/${scenario.id}/run`);
@@ -117,24 +111,62 @@ export default function Simulator() {
     }
   };
   
+  const addYearlyExpense = () => {
+    setParams({
+      ...params,
+      yearly_expenses: [
+        ...(params.yearly_expenses || []),
+        { name: 'טיול שנתי', amount: 15000, month: 7, adjust_for_inflation: true }
+      ]
+    });
+  };
+  
+  const removeYearlyExpense = (index: number) => {
+    const newExpenses = [...(params.yearly_expenses || [])];
+    newExpenses.splice(index, 1);
+    setParams({ ...params, yearly_expenses: newExpenses });
+  };
+  
+  const updateYearlyExpense = (index: number, field: keyof YearlyExpense, value: any) => {
+    const newExpenses = [...(params.yearly_expenses || [])];
+    newExpenses[index] = { ...newExpenses[index], [field]: value };
+    setParams({ ...params, yearly_expenses: newExpenses });
+  };
+  
   if (loading) return <Loading />;
   
-  const chartData = results?.timeline.filter((_, i) => i % 12 === 0).map(point => ({
-    date: new Date(point.date).toLocaleDateString('he-IL', { year: 'numeric', month: 'short' }),
-    assets: showReal ? point.total_assets_real : point.total_assets,
-    deposits: point.total_deposits,
-    returns: point.total_returns,
-    childExpenses: point.total_child_expenses,
-    income: showReal ? point.monthly_income_real : point.monthly_income,
-    inflationFactor: point.inflation_factor,
-  })) || [];
+  // Get self member for age display
+  const selfMember = members.find(m => m.member_type === 'self');
+  const selfAge = selfMember?.age_years;
+  
+  // Chart data - show yearly data points
+  const chartData = results?.timeline
+    .filter((_, i) => i % 12 === 0) // Show yearly
+    .map((point, index) => ({
+      year: selfAge ? selfAge + index : new Date(point.date).getFullYear(),
+      label: new Date(point.date).toLocaleDateString('he-IL', { year: 'numeric' }),
+      assets: showReal ? point.total_assets_real : point.total_assets,
+      deposits: point.total_deposits,
+      returns: point.total_returns,
+    })) || [];
+  
+  // Current year summary
+  const currentYearData = results?.timeline.slice(-12) || [];
+  const yearlyDeposits = currentYearData.reduce((sum, p, i, arr) => {
+    if (i === 0) return 0;
+    return sum + (p.total_deposits - arr[i-1].total_deposits);
+  }, 0);
+  const yearlyReturns = currentYearData.reduce((sum, p, i, arr) => {
+    if (i === 0) return 0;
+    return sum + (p.total_returns - arr[i-1].total_returns);
+  }, 0);
   
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">סימולטור פיננסי</h1>
-          <p className="text-gray-500 mt-1">צפה בעתיד הפיננסי שלך</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">סימולטור משפחתי</h1>
+          <p className="text-gray-500 mt-1">תחזית פיננסית משפחתית משותפת</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setIsParamsOpen(true)} className="btn-secondary">
@@ -192,7 +224,7 @@ export default function Simulator() {
           {results && (
             <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-gray-900 dark:text-white">סיכום</h3>
+                <h3 className="font-bold text-gray-900 dark:text-white">סיכום משפחתי</h3>
                 <button
                   onClick={() => setShowReal(!showReal)}
                   className={`text-xs px-2 py-1 rounded-full transition-colors ${
@@ -214,7 +246,7 @@ export default function Simulator() {
                 </div>
                 {!showReal && (
                   <div className="flex justify-between text-xs">
-                    <span className="text-purple-500">שווי ריאלי (היום)</span>
+                    <span className="text-purple-500">שווי ריאלי</span>
                     <span className="text-purple-600">₪{results.summary.final_balance_real.toLocaleString()}</span>
                   </div>
                 )}
@@ -261,16 +293,46 @@ export default function Simulator() {
         <div className="lg:col-span-3 space-y-6">
           {results ? (
             <>
+              {/* Current Year Summary */}
+              <div className="grid grid-cols-4 gap-4">
+                <div className="card p-4 text-center">
+                  <p className="text-xs text-gray-500 mb-1">הון משפחתי נוכחי</p>
+                  <p className="text-xl font-bold text-emerald-600">
+                    ₪{(results.timeline[0]?.total_assets || 0).toLocaleString()}
+                  </p>
+                </div>
+                <div className="card p-4 text-center">
+                  <p className="text-xs text-gray-500 mb-1">הון בגיל {params.end_age || 67}</p>
+                  <p className="text-xl font-bold text-primary-600">
+                    ₪{(showReal ? results.summary.final_balance_real : results.summary.final_balance).toLocaleString()}
+                  </p>
+                </div>
+                <div className="card p-4 text-center">
+                  <p className="text-xs text-gray-500 mb-1">הפקדות שנתיות</p>
+                  <p className="text-xl font-bold text-blue-600">
+                    ₪{Math.round(yearlyDeposits).toLocaleString()}
+                  </p>
+                </div>
+                <div className="card p-4 text-center">
+                  <p className="text-xs text-gray-500 mb-1">תשואה שנתית</p>
+                  <p className="text-xl font-bold text-purple-600">
+                    ₪{Math.round(yearlyReturns).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              
               {/* Chart */}
               <div className="card p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                    צפי נכסים לאורך זמן
+                    צפי הון משפחתי
                     {showReal && <span className="text-sm font-normal text-purple-500 mr-2">(ערכים ריאליים)</span>}
                   </h2>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span>💡 {showReal ? 'מציג כוח קנייה אמיתי' : 'מציג ערכים נומינליים'}</span>
-                  </div>
+                  {selfAge && (
+                    <span className="text-sm text-gray-500">
+                      גיל {selfAge} → {params.end_age || 67}
+                    </span>
+                  )}
                 </div>
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
@@ -282,28 +344,48 @@ export default function Simulator() {
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis dataKey="date" stroke="#9CA3AF" fontSize={11} />
+                      <XAxis 
+                        dataKey="year" 
+                        stroke="#9CA3AF" 
+                        fontSize={11}
+                        tickFormatter={(v) => selfAge ? `גיל ${v}` : v}
+                      />
                       <YAxis tickFormatter={v => `₪${(v/1000000).toFixed(1)}M`} stroke="#9CA3AF" fontSize={11} />
                       <Tooltip
                         formatter={(value: number, name: string) => [
                           `₪${value.toLocaleString()}`,
-                          name === 'assets' ? 'נכסים' : name === 'deposits' ? 'הפקדות' : name === 'returns' ? 'תשואות' : 'הוצאות ילדים'
+                          name === 'assets' ? 'הון משפחתי' : name === 'deposits' ? 'הפקדות מצטברות' : 'תשואות'
                         ]}
+                        labelFormatter={(label) => selfAge ? `גיל ${label}` : label}
                         contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '12px', direction: 'rtl' }}
                       />
-                      <Legend formatter={v => v === 'assets' ? 'נכסים' : v === 'deposits' ? 'הפקדות מצטברות' : 'תשואות'} />
-                      <Area type="monotone" dataKey="assets" stroke="#10B981" fill="url(#colorAssets)" strokeWidth={3} />
-                      <Line type="monotone" dataKey="deposits" stroke="#3B82F6" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="returns" stroke="#8B5CF6" strokeWidth={2} dot={false} />
+                      <Legend formatter={v => v === 'assets' ? 'הון משפחתי' : v === 'deposits' ? 'הפקדות' : 'תשואות'} />
+                      <Area type="monotone" dataKey="assets" stroke="#10B981" fill="url(#colorAssets)" strokeWidth={3} name="assets" />
+                      <Line type="monotone" dataKey="deposits" stroke="#3B82F6" strokeWidth={2} dot={false} name="deposits" />
+                      <Line type="monotone" dataKey="returns" stroke="#8B5CF6" strokeWidth={2} dot={false} name="returns" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
               
+              {/* Yearly Expenses in Results */}
+              {(params.yearly_expenses?.length || 0) > 0 && (
+                <div className="card p-4">
+                  <h3 className="font-bold text-gray-900 dark:text-white mb-2">הוצאות שנתיות קבועות</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {params.yearly_expenses?.map((exp, i) => (
+                      <span key={i} className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm">
+                        {exp.name}: ₪{exp.amount.toLocaleString()}/שנה
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {/* Goals Analysis */}
               {results.goals_analysis.length > 0 && (
                 <div className="card p-6">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">ניתוח יעדים</h2>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">ניתוח יעדים משפחתיים</h2>
                   <div className="space-y-4">
                     {results.goals_analysis.map(goal => (
                       <div key={goal.goal_id} className={`p-4 rounded-xl ${goal.is_achievable ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-rose-50 dark:bg-rose-900/20'}`}>
@@ -335,9 +417,9 @@ export default function Simulator() {
             </>
           ) : (
             <div className="card p-12 text-center">
-              <div className="text-6xl mb-4">📊</div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">מוכן לסימולציה</h3>
-              <p className="text-gray-500 mb-4">הגדר את הפרמטרים ולחץ על "הרץ סימולציה"</p>
+              <div className="text-6xl mb-4">👨‍👩‍👧‍👦</div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">סימולטור משפחתי</h3>
+              <p className="text-gray-500 mb-4">צפה בעתיד הפיננסי של המשפחה כולה</p>
               <button onClick={runSimulation} className="btn-primary">
                 <PlayIcon className="w-5 h-5 ml-1" />
                 הרץ סימולציה
@@ -348,43 +430,113 @@ export default function Simulator() {
       </div>
       
       {/* Parameters Modal */}
-      <Modal isOpen={isParamsOpen} onClose={() => setIsParamsOpen(false)} title="פרמטרי סימולציה" size="lg">
-        <div className="space-y-4">
+      <Modal isOpen={isParamsOpen} onClose={() => setIsParamsOpen(false)} title="פרמטרי סימולציה משפחתית" size="lg">
+        <div className="space-y-6">
+          {/* Basic Params */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">תאריך התחלה</label>
-              <input type="date" value={params.start_date} onChange={e => setParams({...params, start_date: e.target.value})} className="input" />
+              <input 
+                type="date" 
+                value={params.start_date} 
+                onChange={e => setParams({...params, start_date: e.target.value})} 
+                className="input" 
+              />
             </div>
             <div>
-              <label className="label">גיל סיום (פרישה)</label>
-              <input type="number" value={params.end_age || ''} onChange={e => setParams({...params, end_age: Number(e.target.value)})} className="input" min="30" max="120" />
-            </div>
-            <div>
-              <label className="label">חישוב לפי</label>
-              <select value={params.target_member_id || ''} onChange={e => setParams({...params, target_member_id: e.target.value})} className="input">
-                <option value="">בחר בן משפחה</option>
-                {members.filter(m => m.member_type === 'self' || m.member_type === 'spouse').map(m => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
+              <label className="label">גיל פרישה</label>
+              <NumberInput
+                value={params.end_age || 67}
+                onChange={v => setParams({...params, end_age: v})}
+                min={30}
+                max={120}
+                className="input"
+              />
             </div>
             <div>
               <label className="label">אינפלציה (%)</label>
-              <input type="number" value={params.inflation_rate || ''} onChange={e => setParams({...params, inflation_rate: Number(e.target.value)})} className="input" min="0" max="20" step="0.1" />
+              <NumberInput
+                value={params.inflation_rate || 2.5}
+                onChange={v => setParams({...params, inflation_rate: v})}
+                min={0}
+                max={20}
+                allowDecimal
+                className="input"
+              />
             </div>
             <div>
               <label className="label">הפקדה נוספת חודשית (₪)</label>
-              <input type="number" value={params.extra_monthly_deposit || ''} onChange={e => setParams({...params, extra_monthly_deposit: Number(e.target.value)})} className="input" min="0" />
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={params.include_planned_children}
-                onChange={e => setParams({...params, include_planned_children: e.target.checked})}
-                className="w-4 h-4"
+              <NumberInput
+                value={params.extra_monthly_deposit || 0}
+                onChange={v => setParams({...params, extra_monthly_deposit: v})}
+                min={0}
+                className="input"
               />
-              <label className="text-sm text-gray-700 dark:text-gray-300">כלול ילדים מתוכננים</label>
             </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={params.include_planned_children}
+              onChange={e => setParams({...params, include_planned_children: e.target.checked})}
+              className="w-4 h-4"
+            />
+            <label className="text-sm text-gray-700 dark:text-gray-300">כלול ילדים מתוכננים בחישוב</label>
+          </div>
+          
+          {/* Yearly Expenses */}
+          <div className="border-t pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-gray-900 dark:text-white">הוצאות שנתיות קבועות</h3>
+              <button onClick={addYearlyExpense} className="text-primary-600 text-sm flex items-center gap-1">
+                <PlusIcon className="w-4 h-4" />
+                הוסף הוצאה
+              </button>
+            </div>
+            
+            {(params.yearly_expenses || []).length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">
+                אין הוצאות שנתיות. הוסף טיולים, ביטוחים, או הוצאות קבועות אחרות.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {params.yearly_expenses?.map((exp, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <input
+                      type="text"
+                      value={exp.name}
+                      onChange={e => updateYearlyExpense(i, 'name', e.target.value)}
+                      className="input flex-1"
+                      placeholder="שם ההוצאה"
+                    />
+                    <div className="w-32">
+                      <NumberInput
+                        value={exp.amount}
+                        onChange={v => updateYearlyExpense(i, 'amount', v)}
+                        min={0}
+                        className="input"
+                      />
+                    </div>
+                    <select
+                      value={exp.month || 7}
+                      onChange={e => updateYearlyExpense(i, 'month', Number(e.target.value))}
+                      className="input w-24"
+                    >
+                      {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+                        <option key={m} value={m}>{['ינו','פבר','מרץ','אפר','מאי','יונ','יול','אוג','ספט','אוק','נוב','דצמ'][m-1]}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => removeYearlyExpense(i)}
+                      className="p-2 text-gray-400 hover:text-red-500"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           
           <div className="flex gap-3 pt-4">

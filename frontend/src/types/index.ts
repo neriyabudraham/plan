@@ -5,6 +5,14 @@
 export type UserRole = 'admin' | 'editor' | 'viewer';
 export type GenderType = 'male' | 'female';
 export type FamilyMemberType = 'self' | 'spouse' | 'child' | 'planned_child';
+export type EmploymentType = 'self_employed' | 'employee' | 'company_owner' | 'unemployed';
+
+export const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
+  self_employed: 'עצמאי',
+  employee: 'שכיר',
+  company_owner: 'בעל חברה',
+  unemployed: 'לא עובד',
+};
 export type AssetType = 'savings' | 'investment' | 'pension' | 'study_fund' | 'child_savings' | 'provident' | 'real_estate' | 'other';
 export type TransactionType = 'deposit' | 'withdrawal' | 'interest' | 'fee' | 'adjustment';
 export type FrequencyType = 'once' | 'monthly' | 'quarterly' | 'yearly';
@@ -103,6 +111,7 @@ export interface FamilyMember {
   gender?: GenderType;
   birth_date?: string;
   expected_birth_date?: string;
+  employment_type?: EmploymentType;
   monthly_income?: number;
   notes?: string;
   is_active: boolean;
@@ -276,6 +285,13 @@ export interface GoalsSummary {
 // SIMULATION
 // ============================================
 
+export interface YearlyExpense {
+  name: string;
+  amount: number;
+  month?: number;
+  adjust_for_inflation?: boolean;
+}
+
 export interface SimulationParams {
   start_date: string;
   end_date?: string;
@@ -284,6 +300,7 @@ export interface SimulationParams {
   inflation_rate?: number;
   include_planned_children?: boolean;
   extra_monthly_deposit?: number;
+  yearly_expenses?: YearlyExpense[];
   extra_deposits?: {
     date: string;
     amount: number;

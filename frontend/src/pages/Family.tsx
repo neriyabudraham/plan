@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { PlusIcon, PencilIcon, TrashIcon, UserIcon, HeartIcon, SparklesIcon, BanknotesIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api, { handleApiError } from '../services/api';
-import { FamilyMember, FamilySummary, FamilySettings, FamilyMemberType, GenderType, GENDER_LABELS, IncomeRecord } from '../types';
+import { FamilyMember, FamilySummary, FamilySettings, FamilyMemberType, GenderType, GENDER_LABELS, IncomeRecord, EmploymentType, EMPLOYMENT_TYPE_LABELS } from '../types';
+import NumberInput from '../components/common/NumberInput';
 import Loading from '../components/common/Loading';
 import Modal from '../components/common/Modal';
 
@@ -31,6 +32,7 @@ export default function Family() {
     gender: '' as GenderType | '',
     birth_date: '',
     expected_birth_date: '',
+    employment_type: 'self_employed' as EmploymentType,
     notes: '',
   });
   
@@ -72,6 +74,7 @@ export default function Family() {
       gender: '',
       birth_date: '',
       expected_birth_date: '',
+      employment_type: 'self_employed',
       notes: '',
     });
     setIsModalOpen(true);
@@ -85,6 +88,7 @@ export default function Family() {
       gender: member.gender || '',
       birth_date: member.birth_date?.split('T')[0] || '',
       expected_birth_date: member.expected_birth_date?.split('T')[0] || '',
+      employment_type: member.employment_type || 'self_employed',
       notes: member.notes || '',
     });
     setIsModalOpen(true);
@@ -402,6 +406,21 @@ export default function Family() {
                 onChange={e => setForm({...form, expected_birth_date: e.target.value})}
                 className="input"
               />
+            </div>
+          )}
+          
+          {(form.member_type === 'self' || form.member_type === 'spouse') && (
+            <div>
+              <label className="label">סוג העסקה</label>
+              <select
+                value={form.employment_type}
+                onChange={e => setForm({...form, employment_type: e.target.value as EmploymentType})}
+                className="input"
+              >
+                {Object.entries(EMPLOYMENT_TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
             </div>
           )}
           

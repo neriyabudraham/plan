@@ -23,6 +23,7 @@ const familyMemberSchema = z.object({
   gender: z.enum(['male', 'female']).optional(),
   birth_date: z.string().optional(),
   expected_birth_date: z.string().optional(),
+  employment_type: z.enum(['self_employed', 'employee', 'company_owner', 'unemployed']).optional(),
   notes: z.string().optional(),
 });
 
@@ -183,8 +184,8 @@ router.post('/members', authenticate, async (req: AuthRequest, res: Response) =>
     
     const result = await query<FamilyMember>(
       `INSERT INTO family_members 
-       (id, user_id, member_type, name, gender, birth_date, expected_birth_date, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       (id, user_id, member_type, name, gender, birth_date, expected_birth_date, employment_type, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         uuidv4(),
@@ -194,6 +195,7 @@ router.post('/members', authenticate, async (req: AuthRequest, res: Response) =>
         data.gender,
         data.birth_date || null,
         data.expected_birth_date || null,
+        data.employment_type || 'employee',
         data.notes,
       ]
     );
@@ -229,15 +231,17 @@ router.put('/members/:id', authenticate, async (req: AuthRequest, res: Response)
         gender = COALESCE($2, gender),
         birth_date = COALESCE($3, birth_date),
         expected_birth_date = COALESCE($4, expected_birth_date),
-        notes = COALESCE($5, notes),
+        employment_type = COALESCE($5, employment_type),
+        notes = COALESCE($6, notes),
         updated_at = NOW()
-       WHERE id = $6 AND user_id = $7
+       WHERE id = $7 AND user_id = $8
        RETURNING *`,
       [
         data.name,
         data.gender,
         data.birth_date,
         data.expected_birth_date,
+        data.employment_type,
         data.notes,
         req.params.id,
         req.user!.id,

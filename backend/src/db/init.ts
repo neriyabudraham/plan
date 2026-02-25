@@ -33,6 +33,12 @@ const initDatabase = async () => {
     
     await client.query(`
       DO $$ BEGIN
+        CREATE TYPE employment_type AS ENUM ('self_employed', 'employee', 'company_owner', 'unemployed');
+      EXCEPTION WHEN duplicate_object THEN null; END $$;
+    `);
+    
+    await client.query(`
+      DO $$ BEGIN
         CREATE TYPE asset_type AS ENUM (
           'savings',           -- חיסכון רגיל
           'investment',        -- תיק השקעות
@@ -138,11 +144,17 @@ const initDatabase = async () => {
         gender gender_type,
         birth_date DATE,
         expected_birth_date DATE,
+        employment_type employment_type DEFAULT 'employee',
         notes TEXT,
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
+    `);
+    
+    // Add employment_type column if not exists (for existing databases)
+    await client.query(`
+      ALTER TABLE family_members ADD COLUMN IF NOT EXISTS employment_type employment_type DEFAULT 'employee';
     `);
 
     // ============================================

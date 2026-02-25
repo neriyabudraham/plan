@@ -7,6 +7,7 @@ import { Request } from 'express';
 export type UserRole = 'admin' | 'editor' | 'viewer';
 export type GenderType = 'male' | 'female';
 export type FamilyMemberType = 'self' | 'spouse' | 'child' | 'planned_child';
+export type EmploymentType = 'self_employed' | 'employee' | 'company_owner' | 'unemployed';
 export type AssetType = 'savings' | 'investment' | 'pension' | 'study_fund' | 'child_savings' | 'provident' | 'real_estate' | 'other';
 export type TransactionType = 'deposit' | 'withdrawal' | 'interest' | 'fee' | 'adjustment';
 export type FrequencyType = 'once' | 'monthly' | 'quarterly' | 'yearly';
@@ -65,6 +66,7 @@ export interface FamilyMember {
   gender?: GenderType;
   birth_date?: Date;
   expected_birth_date?: Date;
+  employment_type?: EmploymentType;
   notes?: string;
   is_active: boolean;
   created_at: Date;
@@ -262,9 +264,17 @@ export interface SimulationParams {
   inflation_rate?: number;
   include_planned_children?: boolean;
   extra_monthly_deposit?: number;
+  yearly_expenses?: YearlyExpense[];
   planned_children?: PlannedChild[];
   extra_deposits?: ExtraDeposit[];
   withdrawal_events?: WithdrawalEvent[];
+}
+
+export interface YearlyExpense {
+  name: string;
+  amount: number;
+  month?: number; // 1-12
+  adjust_for_inflation?: boolean;
 }
 
 export interface PlannedChild {

@@ -19,6 +19,12 @@ const simulationParamsSchema = z.object({
   inflation_rate: z.number().min(0).max(20).optional(),
   include_planned_children: z.boolean().default(true),
   extra_monthly_deposit: z.number().min(0).default(0),
+  yearly_expenses: z.array(z.object({
+    name: z.string(),
+    amount: z.number(),
+    month: z.number().min(1).max(12).default(7), // Default to July (vacation month)
+    adjust_for_inflation: z.boolean().default(true),
+  })).default([]),
   extra_deposits: z.array(z.object({
     date: z.string(),
     amount: z.number(),
@@ -76,22 +82,37 @@ function getIncomeAtDate(incomeHistory: { member_id: string; records: IncomeReco
 async function runSimulation(ctx: SimulationContext): Promise<SimulationResults> {
   const { params, assets, familyMembers, childExpenseItems, goals, inflationRate, incomeHistory } = ctx;
   
-  const startDate = new Date(params.start_date);
+  const startDate = new Date(params.start_date || new Date());
   let endDate: Date;
   
-  // Determine end date
+  // For family simulation - find the "self" member to calculate retirement age
+  const selfMember = familyMembers.find(m => m.member_type === 'self');
+  const spouseMember = familyMembers.find(m => m.member_type === 'spouse');
+  
+  // Determine end date - family based (use the older member's retirement)
   if (params.end_date) {
     endDate = new Date(params.end_date);
-  } else if (params.end_age && params.target_member_id) {
-    const member = familyMembers.find(m => m.id === params.target_member_id);
-    if (member?.birth_date) {
-      endDate = new Date(member.birth_date);
+  } else if (params.end_age) {
+    // Use target member if specified, otherwise use self
+    const targetMember = params.target_member_id 
+      ? familyMembers.find(m => m.id === params.target_member_id)
+      : selfMember;
+    
+    if (targetMember?.birth_date) {
+      endDate = new Date(targetMember.birth_date);
       endDate.setFullYear(endDate.getFullYear() + params.end_age);
     } else {
+      // Default: calculate from current date + years until retirement age
       endDate = new Date(startDate);
-      endDate.setFullYear(endDate.getFullYear() + 30); // Default 30 years
+      endDate.setFullYear(endDate.getFullYear() + params.end_age - 30); // Assume starting at ~30
     }
   } else {
+    endDate = new Date(startDate);
+    endDate.setFullYear(endDate.getFullYear() + 30);
+  }
+  
+  // Make sure we have at least some simulation time
+  if (endDate <= startDate) {
     endDate = new Date(startDate);
     endDate.setFullYear(endDate.getFullYear() + 30);
   }
@@ -250,6 +271,35 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
           assetBalances[targetAsset.id] -= withdrawal.amount;
           totalWithdrawals += withdrawal.amount;
           events.push(`משיכה: ${withdrawal.description || ''} (₪${withdrawal.amount.toLocaleString()})`);
+        }
+      }
+    }
+    
+    // Process yearly expenses (e.g., annual vacation)
+    for (const yearlyExpense of params.yearly_expenses || []) {
+      // Check if this is the month for this yearly expense
+      if ((month + 1) === yearlyExpense.month) {
+        let expenseAmount = yearlyExpense.amount;
+        
+        // Adjust for inflation if needed
+        if (yearlyExpense.adjust_for_inflation) {
+          expenseAmount = yearlyExpense.amount * inflationFactor;
+        }
+        
+        // Withdraw from assets
+        let remaining = expenseAmount;
+        for (const asset of assets) {
+          if (remaining <= 0) break;
+          const available = Math.min(assetBalances[asset.id], remaining);
+          if (available > 0) {
+            assetBalances[asset.id] -= available;
+            remaining -= available;
+          }
+        }
+        
+        totalWithdrawals += expenseAmount - remaining;
+        if (remaining < expenseAmount) {
+          events.push(`${yearlyExpense.name} (₪${Math.round(expenseAmount - remaining).toLocaleString()})`);
         }
       }
     }
