@@ -259,19 +259,28 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
     
     // Record at first day of each month
     if (currentDate.getDate() === 1 || currentDate.getTime() === startDate.getTime()) {
-      // Calculate monthly income at this date (with inflation adjustment)
+      // Calculate monthly income at this date
       const baseMonthlyIncome = getIncomeAtDate(incomeHistory, currentDate);
-      const adjustedMonthlyIncome = baseMonthlyIncome * inflationFactor;
+      // Nominal income = base income adjusted for future inflation (what you'll actually get paid)
+      const nominalMonthlyIncome = baseMonthlyIncome * inflationFactor;
+      // Real income = same purchasing power as today (base income stays same in real terms)
+      const realMonthlyIncome = baseMonthlyIncome;
+      
+      // Real value = nominal value / inflation factor (what it's worth in today's money)
+      const totalAssetsReal = totalAssets / inflationFactor;
       
       timeline.push({
         date: dateStr,
         total_assets: Math.round(totalAssets),
+        total_assets_real: Math.round(totalAssetsReal),
         total_deposits: Math.round(totalDeposits),
         total_withdrawals: Math.round(totalWithdrawals),
         total_returns: Math.round(totalReturns),
         total_fees: Math.round(totalFees),
         total_child_expenses: Math.round(totalChildExpenses),
-        monthly_income: Math.round(adjustedMonthlyIncome),
+        monthly_income: Math.round(nominalMonthlyIncome),
+        monthly_income_real: Math.round(realMonthlyIncome),
+        inflation_factor: Math.round(inflationFactor * 1000) / 1000,
         assets_breakdown: Object.fromEntries(
           Object.entries(assetBalances).map(([id, bal]) => [id, Math.round(bal)])
         ),
@@ -283,12 +292,27 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
     currentDate.setMonth(currentDate.getMonth() + 1);
   }
   
+  // Calculate final inflation factor (for the entire simulation period)
+  const yearsTotal = (endDate.getTime() - startDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+  const totalInflationFactor = Math.pow(1 + inflationRate / 100, yearsTotal);
+  
   // Calculate final metrics
   const finalBalance = Object.values(assetBalances).reduce((sum, bal) => sum + bal, 0);
+  const finalBalanceReal = finalBalance / totalInflationFactor; // In today's money
   const initialBalance = assets.reduce((sum, a) => sum + Number(a.current_balance), 0);
+  
+  // Nominal return (what you see on paper)
   const effectiveReturn = initialBalance > 0 
     ? ((finalBalance / initialBalance) - 1) * 100 
     : 0;
+  
+  // Real return (actual purchasing power gained)
+  const effectiveReturnReal = initialBalance > 0 
+    ? ((finalBalanceReal / initialBalance) - 1) * 100 
+    : 0;
+  
+  // Real returns calculation
+  const totalReturnsReal = totalReturns / totalInflationFactor;
   
   // Goals analysis
   const goalsAnalysis = goals.map(goal => {
@@ -330,11 +354,15 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
     timeline,
     summary: {
       final_balance: Math.round(finalBalance),
+      final_balance_real: Math.round(finalBalanceReal),
       total_deposited: Math.round(totalDeposits),
       total_returns: Math.round(totalReturns),
+      total_returns_real: Math.round(totalReturnsReal),
       total_fees: Math.round(totalFees),
       total_child_expenses: Math.round(totalChildExpenses),
       effective_return_rate: Math.round(effectiveReturn * 100) / 100,
+      effective_return_rate_real: Math.round(effectiveReturnReal * 100) / 100,
+      total_inflation_factor: Math.round(totalInflationFactor * 1000) / 1000,
     },
     goals_analysis: goalsAnalysis,
   };

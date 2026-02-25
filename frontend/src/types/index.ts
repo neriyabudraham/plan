@@ -302,11 +302,15 @@ export interface SimulationResults {
   timeline: TimelinePoint[];
   summary: {
     final_balance: number;
+    final_balance_real: number;
     total_deposited: number;
     total_returns: number;
+    total_returns_real: number;
     total_fees: number;
     total_child_expenses: number;
     effective_return_rate: number;
+    effective_return_rate_real: number;
+    total_inflation_factor: number;
   };
   goals_analysis: GoalAnalysis[];
 }
@@ -314,12 +318,15 @@ export interface SimulationResults {
 export interface TimelinePoint {
   date: string;
   total_assets: number;
+  total_assets_real: number;
   total_deposits: number;
   total_withdrawals: number;
   total_returns: number;
   total_fees: number;
   total_child_expenses: number;
   monthly_income: number;
+  monthly_income_real: number;
+  inflation_factor: number;
   assets_breakdown: Record<string, number>;
   events: string[];
 }

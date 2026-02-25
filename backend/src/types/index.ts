@@ -296,23 +296,30 @@ export interface SimulationResults {
 export interface TimelinePoint {
   date: string;
   total_assets: number;
+  total_assets_real: number; // שווי ריאלי (מתואם לאינפלציה)
   total_deposits: number;
   total_withdrawals: number;
   total_returns: number;
   total_fees: number;
   total_child_expenses: number;
   monthly_income: number;
+  monthly_income_real: number; // הכנסה ריאלית
+  inflation_factor: number; // מקדם האינפלציה מתחילת הסימולציה
   assets_breakdown: Record<string, number>;
   events: string[];
 }
 
 export interface SimulationSummary {
   final_balance: number;
+  final_balance_real: number; // יתרה סופית בערכים ריאליים (של היום)
   total_deposited: number;
   total_returns: number;
+  total_returns_real: number; // תשואה ריאלית
   total_fees: number;
   total_child_expenses: number;
   effective_return_rate: number;
+  effective_return_rate_real: number; // תשואה אפקטיבית ריאלית
+  total_inflation_factor: number; // סה"כ אינפלציה על פני התקופה
 }
 
 export interface GoalAnalysis {

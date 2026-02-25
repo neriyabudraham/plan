@@ -31,6 +31,7 @@ export default function Simulator() {
   });
   
   const [saveName, setSaveName] = useState('');
+  const [showReal, setShowReal] = useState(false); // Toggle between nominal and real values
   
   useEffect(() => {
     fetchInitialData();
@@ -120,10 +121,12 @@ export default function Simulator() {
   
   const chartData = results?.timeline.filter((_, i) => i % 12 === 0).map(point => ({
     date: new Date(point.date).toLocaleDateString('he-IL', { year: 'numeric', month: 'short' }),
-    assets: point.total_assets,
+    assets: showReal ? point.total_assets_real : point.total_assets,
     deposits: point.total_deposits,
     returns: point.total_returns,
     childExpenses: point.total_child_expenses,
+    income: showReal ? point.monthly_income_real : point.monthly_income,
+    inflationFactor: point.inflation_factor,
   })) || [];
   
   return (
@@ -188,19 +191,42 @@ export default function Simulator() {
           {/* Quick Stats */}
           {results && (
             <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="font-bold text-gray-900 dark:text-white">סיכום</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-gray-900 dark:text-white">סיכום</h3>
+                <button
+                  onClick={() => setShowReal(!showReal)}
+                  className={`text-xs px-2 py-1 rounded-full transition-colors ${
+                    showReal 
+                      ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' 
+                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {showReal ? '🎯 ריאלי' : '💵 נומינלי'}
+                </button>
+              </div>
+              
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">יתרה סופית</span>
-                  <span className="font-bold text-emerald-600">₪{results.summary.final_balance.toLocaleString()}</span>
+                  <span className="font-bold text-emerald-600">
+                    ₪{(showReal ? results.summary.final_balance_real : results.summary.final_balance).toLocaleString()}
+                  </span>
                 </div>
+                {!showReal && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-purple-500">שווי ריאלי (היום)</span>
+                    <span className="text-purple-600">₪{results.summary.final_balance_real.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-500">סה"כ הופקד</span>
                   <span className="font-medium">₪{results.summary.total_deposited.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">תשואות</span>
-                  <span className="font-medium text-primary-600">₪{results.summary.total_returns.toLocaleString()}</span>
+                  <span className="font-medium text-primary-600">
+                    ₪{(showReal ? results.summary.total_returns_real : results.summary.total_returns).toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">עמלות</span>
@@ -212,7 +238,19 @@ export default function Simulator() {
                 </div>
                 <div className="flex justify-between pt-2 border-t">
                   <span className="text-gray-500">תשואה אפקטיבית</span>
-                  <span className="font-bold">{results.summary.effective_return_rate}%</span>
+                  <span className="font-bold">
+                    {showReal ? results.summary.effective_return_rate_real : results.summary.effective_return_rate}%
+                  </span>
+                </div>
+                {!showReal && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-purple-500">תשואה ריאלית</span>
+                    <span className="text-purple-600">{results.summary.effective_return_rate_real}%</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-2 border-t text-xs">
+                  <span className="text-gray-400">אינפלציה מצטברת</span>
+                  <span className="text-gray-500">{((results.summary.total_inflation_factor - 1) * 100).toFixed(1)}%</span>
                 </div>
               </div>
             </div>
@@ -225,7 +263,15 @@ export default function Simulator() {
             <>
               {/* Chart */}
               <div className="card p-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">צפי נכסים לאורך זמן</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    צפי נכסים לאורך זמן
+                    {showReal && <span className="text-sm font-normal text-purple-500 mr-2">(ערכים ריאליים)</span>}
+                  </h2>
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span>💡 {showReal ? 'מציג כוח קנייה אמיתי' : 'מציג ערכים נומינליים'}</span>
+                  </div>
+                </div>
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData}>
