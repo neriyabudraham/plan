@@ -51,7 +51,7 @@ export default function Layout() {
   );
   
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
@@ -62,9 +62,9 @@ export default function Layout() {
       
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 right-0 z-50 w-72 bg-white/80 backdrop-blur-xl dark:bg-gray-900/80 border-l border-gray-200/50 dark:border-gray-700/50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : 'translate-x-full'
-        } lg:static lg:inset-auto shadow-2xl lg:shadow-none`}
+        className={`fixed lg:sticky top-0 inset-y-0 right-0 z-50 w-72 h-screen bg-white/95 backdrop-blur-xl dark:bg-gray-900/95 border-l border-gray-200/50 dark:border-gray-700/50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
+        } shadow-2xl lg:shadow-none flex-shrink-0`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -156,7 +156,7 @@ export default function Layout() {
       </aside>
       
       {/* Main content */}
-      <div className="lg:mr-72">
+      <div className="flex-1 min-w-0">
         {/* Top bar for mobile */}
         <header className="sticky top-0 z-30 h-16 bg-white/80 backdrop-blur-xl dark:bg-gray-900/80 border-b border-gray-200/50 dark:border-gray-700/50 lg:hidden shadow-sm">
           <div className="flex items-center justify-between h-full px-4">
