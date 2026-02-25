@@ -3,7 +3,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { config } from './config/index.js';
 
 // Routes
@@ -15,8 +14,7 @@ import whatsappRoutes from './routes/whatsapp.js';
 import dashboardRoutes from './routes/dashboard.js';
 import recurringRoutes from './routes/recurring.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.resolve();
 
 const app = express();
 
@@ -63,7 +61,7 @@ app.get('/api/health', (_req, res) => {
 
 // Serve static files in production
 if (config.nodeEnv === 'production') {
-  const publicPath = path.join(__dirname, '..', 'public');
+  const publicPath = path.join(__dirname, 'public');
   app.use(express.static(publicPath));
   
   // SPA fallback
