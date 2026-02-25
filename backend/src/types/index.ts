@@ -246,7 +246,7 @@ export interface SimulationScenario {
 }
 
 export interface SimulationParams {
-  start_date: string;
+  start_date?: string;
   end_date?: string;
   end_age?: number;
   target_member_id?: string;
@@ -334,6 +334,7 @@ export interface WhatsAppSettings {
   notify_on_deposit: boolean;
   notify_on_withdrawal: boolean;
   notify_monthly_summary: boolean;
+  notify_weekly_summary: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -345,6 +346,7 @@ export interface WhatsAppSettings {
 export interface DashboardStats {
   total_assets: number;
   totalBalance: number;
+  totalFunds: number;
   total_goals: number;
   total_goal_progress: number;
   monthly_deposits: number;
@@ -458,4 +460,7 @@ export interface FundProgress {
 export interface WhatsAppGroup {
   id: string;
   name: string;
+  JID?: string;
+  Name?: string;
+  ParticipantCount?: number;
 }
