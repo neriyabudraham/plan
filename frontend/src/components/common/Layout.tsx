@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   HomeIcon,
+  UserGroupIcon,
+  DocumentTextIcon,
   BanknotesIcon,
-  ArrowsRightLeftIcon,
-  CalendarDaysIcon,
-  UsersIcon,
+  FlagIcon,
+  ChartBarIcon,
   Cog6ToothIcon,
   Bars3Icon,
   XMarkIcon,
@@ -19,11 +20,12 @@ import api from '../../services/api';
 
 const navigation = [
   { name: 'דשבורד', href: '/', icon: HomeIcon },
-  { name: 'קופות', href: '/funds', icon: BanknotesIcon },
-  { name: 'תנועות', href: '/transactions', icon: ArrowsRightLeftIcon },
-  { name: 'הפקדות חוזרות', href: '/recurring', icon: CalendarDaysIcon },
-  { name: 'משתמשים', href: '/users', icon: UsersIcon, adminOnly: true },
-  { name: 'הגדרות', href: '/settings', icon: Cog6ToothIcon, adminOnly: true },
+  { name: 'משפחה', href: '/family', icon: UserGroupIcon },
+  { name: 'תבניות עלויות', href: '/child-templates', icon: DocumentTextIcon },
+  { name: 'נכסים והשקעות', href: '/assets', icon: BanknotesIcon },
+  { name: 'יעדים', href: '/goals', icon: FlagIcon },
+  { name: 'סימולטור', href: '/simulator', icon: ChartBarIcon },
+  { name: 'הגדרות', href: '/settings', icon: Cog6ToothIcon },
 ];
 
 export default function Layout() {
@@ -45,10 +47,6 @@ export default function Layout() {
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
-  
-  const filteredNavigation = navigation.filter(
-    (item) => !item.adminOnly || user?.role === 'admin'
-  );
   
   return (
     <div className="min-h-screen flex">
@@ -87,7 +85,7 @@ export default function Layout() {
           
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-            {filteredNavigation.map((item) => (
+            {navigation.map((item) => (
               <NavLink
                 key={item.href}
                 to={item.href}

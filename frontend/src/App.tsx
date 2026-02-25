@@ -8,11 +8,12 @@ import ResetPassword from './pages/ResetPassword';
 import AcceptInvite from './pages/AcceptInvite';
 import ChangePassword from './pages/ChangePassword';
 import Dashboard from './pages/Dashboard';
-import Funds from './pages/Funds';
-import FundDetails from './pages/FundDetails';
-import Transactions from './pages/Transactions';
-import Recurring from './pages/Recurring';
-import Users from './pages/Users';
+import Family from './pages/Family';
+import ChildTemplates from './pages/ChildTemplates';
+import Assets from './pages/Assets';
+import AssetDetails from './pages/AssetDetails';
+import Goals from './pages/Goals';
+import Simulator from './pages/Simulator';
 import Settings from './pages/Settings';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -60,11 +61,12 @@ export default function App() {
         }
       >
         <Route index element={<Dashboard />} />
-        <Route path="funds" element={<Funds />} />
-        <Route path="funds/:id" element={<FundDetails />} />
-        <Route path="transactions" element={<Transactions />} />
-        <Route path="recurring" element={<Recurring />} />
-        <Route path="users" element={<Users />} />
+        <Route path="family" element={<Family />} />
+        <Route path="child-templates" element={<ChildTemplates />} />
+        <Route path="assets" element={<Assets />} />
+        <Route path="assets/:id" element={<AssetDetails />} />
+        <Route path="goals" element={<Goals />} />
+        <Route path="simulator" element={<Simulator />} />
         <Route path="settings" element={<Settings />} />
       </Route>
       

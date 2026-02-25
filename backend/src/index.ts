@@ -8,12 +8,11 @@ import { testConnection } from './db/pool';
 
 // Routes
 import authRoutes from './routes/auth';
-import userRoutes from './routes/users';
-import fundRoutes from './routes/funds';
-import transactionRoutes from './routes/transactions';
-import whatsappRoutes from './routes/whatsapp';
-import dashboardRoutes from './routes/dashboard';
-import recurringRoutes from './routes/recurring';
+import familyRoutes from './routes/family';
+import childTemplatesRoutes from './routes/childTemplates';
+import assetsRoutes from './routes/assets';
+import goalsRoutes from './routes/goals';
+import simulationRoutes from './routes/simulation';
 
 const app = express();
 
@@ -28,8 +27,8 @@ app.use(helmet({
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 200,
   message: { error: 'יותר מדי בקשות, נסה שוב מאוחר יותר' },
   validate: { xForwardedForHeader: false },
 });
@@ -50,12 +49,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/funds', fundRoutes);
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/whatsapp', whatsappRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/recurring', recurringRoutes);
+app.use('/api/family', familyRoutes);
+app.use('/api/child-templates', childTemplatesRoutes);
+app.use('/api/assets', assetsRoutes);
+app.use('/api/goals', goalsRoutes);
+app.use('/api/simulation', simulationRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -81,7 +79,6 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
 // Start server
 const startServer = async () => {
-  // Test database connection
   const dbConnected = await testConnection();
   if (!dbConnected) {
     console.error('❌ Failed to connect to database');
