@@ -10,7 +10,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3955
-      - DATABASE_URL=postgresql://planit:${DB_PASSWORD}@172.17.0.1:5432/planit
+      - DATABASE_URL=postgresql://planit:${DB_PASSWORD}@db:5432/planit
       - JWT_SECRET=${JWT_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
@@ -21,6 +21,27 @@ services:
       - SMTP_PASS=${SMTP_PASS}
       - APP_URL=${APP_URL}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=planit
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=planit
+    volumes:
+      - planit_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5455:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U planit -d planit"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  planit_postgres_data:
