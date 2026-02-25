@@ -265,15 +265,15 @@ export interface PlannedChild {
 }
 
 export interface ExtraDeposit {
-  date: string;
-  amount: number;
+  date?: string;
+  amount?: number;
   asset_id?: string;
   description?: string;
 }
 
 export interface WithdrawalEvent {
-  date: string;
-  amount: number;
+  date?: string;
+  amount?: number;
   asset_id?: string;
   description?: string;
 }
@@ -322,14 +322,14 @@ export interface GoalAnalysis {
 
 export interface WhatsAppSettings {
   id: string;
-  user_id: string;
+  user_id?: string;
   api_key?: string;
   session?: string;
   notification_target?: string;
   notification_type?: NotificationTargetType;
   is_active: boolean;
   notify_on_milestone: boolean;
-  notify_on_goal_reached: boolean;
+  notify_on_goal_reached?: boolean;
   notify_on_target_reached: boolean;
   notify_on_deposit: boolean;
   notify_on_withdrawal: boolean;
@@ -344,32 +344,11 @@ export interface WhatsAppSettings {
 // ============================================
 
 export interface DashboardStats {
-  total_assets: number;
   totalBalance: number;
   totalFunds: number;
-  total_goals: number;
-  total_goal_progress: number;
-  monthly_deposits: number;
   monthlyDeposits: number;
-  monthly_withdrawals: number;
   monthlyWithdrawals: number;
-  projected_value_1y: number;
-  projected_value_5y: number;
-  children_count: number;
-  planned_children_count: number;
   fundsProgress: FundProgress[];
-  next_milestone?: {
-    name: string;
-    goal_name: string;
-    target_amount: number;
-    current_amount: number;
-    target_date?: Date;
-  };
-  assets_by_type: {
-    type: AssetType;
-    count: number;
-    total: number;
-  }[];
 }
 
 // ============================================
@@ -458,9 +437,7 @@ export interface FundProgress {
 }
 
 export interface WhatsAppGroup {
-  id: string;
-  name: string;
-  JID?: string;
-  Name?: string;
-  ParticipantCount?: number;
+  JID: string;
+  Name: string;
+  ParticipantCount: number;
 }
