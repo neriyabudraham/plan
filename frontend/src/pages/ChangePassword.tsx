@@ -5,7 +5,7 @@ import api, { handleApiError } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 
 export default function ChangePassword() {
-  const { user, mustChangePassword, setMustChangePassword, logout } = useAuthStore();
+  const { mustChangePassword, setMustChangePassword, logout } = useAuthStore();
   const navigate = useNavigate();
   
   const [currentPassword, setCurrentPassword] = useState('');
