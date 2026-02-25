@@ -603,6 +603,22 @@ router.post('/scenarios/:id/run', authenticate, async (req: AuthRequest, res: Re
       query('SELECT * FROM family_settings WHERE user_id = $1', [req.user!.id]),
     ]);
     
+    // Get income history for members with income (self, spouse)
+    const incomeMembers = membersResult.rows.filter(m => 
+      m.member_type === 'self' || m.member_type === 'spouse'
+    );
+    
+    const incomeHistory: { member_id: string; records: IncomeRecord[] }[] = [];
+    for (const member of incomeMembers) {
+      const incomeRecords = await query<IncomeRecord>(
+        'SELECT * FROM income_history WHERE member_id = $1 ORDER BY effective_date DESC',
+        [member.id]
+      );
+      if (incomeRecords.rows.length > 0) {
+        incomeHistory.push({ member_id: member.id, records: incomeRecords.rows });
+      }
+    }
+    
     const children = membersResult.rows.filter(m => 
       m.member_type === 'child' || m.member_type === 'planned_child'
     );
@@ -634,6 +650,7 @@ router.post('/scenarios/:id/run', authenticate, async (req: AuthRequest, res: Re
       childExpenseItems,
       goals: goalsResult.rows,
       inflationRate,
+      incomeHistory,
     });
     
     // Cache results

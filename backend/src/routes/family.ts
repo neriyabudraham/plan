@@ -183,8 +183,8 @@ router.post('/members', authenticate, async (req: AuthRequest, res: Response) =>
     
     const result = await query<FamilyMember>(
       `INSERT INTO family_members 
-       (id, user_id, member_type, name, gender, birth_date, expected_birth_date, monthly_income, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       (id, user_id, member_type, name, gender, birth_date, expected_birth_date, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
       [
         uuidv4(),
@@ -194,7 +194,6 @@ router.post('/members', authenticate, async (req: AuthRequest, res: Response) =>
         data.gender,
         data.birth_date || null,
         data.expected_birth_date || null,
-        data.monthly_income,
         data.notes,
       ]
     );
@@ -230,17 +229,15 @@ router.put('/members/:id', authenticate, async (req: AuthRequest, res: Response)
         gender = COALESCE($2, gender),
         birth_date = COALESCE($3, birth_date),
         expected_birth_date = COALESCE($4, expected_birth_date),
-        monthly_income = COALESCE($5, monthly_income),
-        notes = COALESCE($6, notes),
+        notes = COALESCE($5, notes),
         updated_at = NOW()
-       WHERE id = $7 AND user_id = $8
+       WHERE id = $6 AND user_id = $7
        RETURNING *`,
       [
         data.name,
         data.gender,
         data.birth_date,
         data.expected_birth_date,
-        data.monthly_income,
         data.notes,
         req.params.id,
         req.user!.id,
