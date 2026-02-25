@@ -28,6 +28,12 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(8, 'סיסמה חייבת להכיל לפחות 8 תווים'),
 });
 
+const setupSchema = z.object({
+  name: z.string().min(2, 'שם חייב להכיל לפחות 2 תווים'),
+  email: z.string().email('מייל לא תקין'),
+  password: z.string().min(8, 'סיסמה חייבת להכיל לפחות 8 תווים'),
+});
+
 const generateTokens = (user: User) => {
   const payload: TokenPayload = {
     userId: user.id,
@@ -45,6 +51,71 @@ const generateTokens = (user: User) => {
   
   return { accessToken, refreshToken };
 };
+
+// Check if initial setup is needed
+router.get('/check-setup', async (_req, res) => {
+  try {
+    const result = await query('SELECT COUNT(*) as count FROM users');
+    const count = parseInt(result.rows[0].count, 10);
+    res.json({ needsSetup: count === 0 });
+  } catch (error) {
+    console.error('Check setup error:', error);
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
+
+// Initial setup - create first admin user
+router.post('/setup', async (req, res) => {
+  try {
+    // Check if users already exist
+    const countResult = await query('SELECT COUNT(*) as count FROM users');
+    const count = parseInt(countResult.rows[0].count, 10);
+    
+    if (count > 0) {
+      return res.status(400).json({ error: 'המערכת כבר הוגדרה' });
+    }
+    
+    const { name, email, password } = setupSchema.parse(req.body);
+    
+    const hashedPassword = await bcrypt.hash(password, 12);
+    
+    const result = await query<User>(
+      `INSERT INTO users (id, name, email, password, role, is_active, must_change_password, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, 'admin', true, false, NOW(), NOW())
+       RETURNING *`,
+      [uuidv4(), name, email.toLowerCase(), hashedPassword]
+    );
+    
+    const user = result.rows[0];
+    const tokens = generateTokens(user);
+    
+    // Save refresh token
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    
+    await query(
+      'INSERT INTO refresh_tokens (id, user_id, token, expires_at) VALUES ($1, $2, $3, $4)',
+      [uuidv4(), user.id, tokens.refreshToken, expiresAt]
+    );
+    
+    res.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      ...tokens,
+      mustChangePassword: false,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+    console.error('Setup error:', error);
+    res.status(500).json({ error: 'שגיאת שרת' });
+  }
+});
 
 // Login
 router.post('/login', async (req, res) => {

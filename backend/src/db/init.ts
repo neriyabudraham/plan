@@ -1,7 +1,4 @@
 import { pool } from './pool';
-import bcrypt from 'bcryptjs';
-import { config } from '../config/index';
-import { v4 as uuidv4 } from 'uuid';
 
 const initDatabase = async () => {
   const client = await pool.connect();
@@ -198,22 +195,6 @@ const initDatabase = async () => {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_recurring_deposits_next_run ON recurring_deposits(next_run);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_alerts_fund_id ON alerts(fund_id);`);
-
-    // Create admin user if not exists
-    const adminExists = await client.query(
-      'SELECT id FROM users WHERE email = $1',
-      [config.app.adminEmail]
-    );
-
-    if (adminExists.rows.length === 0) {
-      const hashedPassword = await bcrypt.hash('admin123', 12);
-      await client.query(
-        `INSERT INTO users (id, email, password, name, role, must_change_password)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [uuidv4(), config.app.adminEmail, hashedPassword, 'מנהל', 'admin', true]
-      );
-      console.log(`Admin user created: ${config.app.adminEmail} (password: admin123)`);
-    }
 
     await client.query('COMMIT');
     console.log('Database initialized successfully!');

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api, { handleApiError } from '../services/api';
@@ -22,8 +22,26 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingSetup, setCheckingSetup] = useState(true);
   const { setAuth, setMustChangePassword } = useAuthStore();
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    checkSetup();
+  }, []);
+  
+  const checkSetup = async () => {
+    try {
+      const response = await api.get<{ needsSetup: boolean }>('/auth/check-setup');
+      if (response.data.needsSetup) {
+        navigate('/setup');
+      }
+    } catch {
+      // Server not available, stay on login
+    } finally {
+      setCheckingSetup(false);
+    }
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +90,9 @@ export default function Login() {
   };
   
   // Initialize Google Sign-In
-  useState(() => {
+  useEffect(() => {
+    if (checkingSetup) return;
+    
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
@@ -95,7 +115,19 @@ export default function Login() {
       }
     };
     document.body.appendChild(script);
-  });
+    
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, [checkingSetup]);
+  
+  if (checkingSetup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="w-8 h-8 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
