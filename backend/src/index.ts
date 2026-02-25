@@ -14,8 +14,6 @@ import whatsappRoutes from './routes/whatsapp';
 import dashboardRoutes from './routes/dashboard';
 import recurringRoutes from './routes/recurring';
 
-const __dirname = path.resolve();
-
 const app = express();
 
 // Security middleware
