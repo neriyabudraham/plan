@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { config } from './config/index';
+import { testConnection } from './db/pool';
 
 // Routes
 import authRoutes from './routes/auth';
@@ -79,7 +80,19 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 // Start server
-app.listen(config.port, () => {
-  console.log(`🚀 PlanIt server running on port ${config.port}`);
-  console.log(`📊 Environment: ${config.nodeEnv}`);
-});
+const startServer = async () => {
+  // Test database connection
+  const dbConnected = await testConnection();
+  if (!dbConnected) {
+    console.error('❌ Failed to connect to database');
+    process.exit(1);
+  }
+  console.log('✅ Database connected');
+  
+  app.listen(config.port, () => {
+    console.log(`🚀 PlanIt server running on port ${config.port}`);
+    console.log(`📊 Environment: ${config.nodeEnv}`);
+  });
+};
+
+startServer();

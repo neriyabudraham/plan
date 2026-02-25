@@ -275,12 +275,10 @@ router.post('/change-password', authenticate, async (req: AuthRequest, res: Resp
       return res.status(400).json({ error: 'לא ניתן לשנות סיסמה למשתמש Google' });
     }
     
-    // For first login with temp password
-    if (!user.must_change_password) {
-      const isValid = await bcrypt.compare(currentPassword, user.password);
-      if (!isValid) {
-        return res.status(401).json({ error: 'סיסמה נוכחית שגויה' });
-      }
+    // Always verify current password (even on first login)
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      return res.status(401).json({ error: 'סיסמה נוכחית שגויה' });
     }
     
     const hashedPassword = await bcrypt.hash(newPassword, 12);
