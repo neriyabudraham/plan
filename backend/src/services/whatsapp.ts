@@ -70,7 +70,8 @@ export const fetchWhatsAppGroups = async (
       throw new Error(`Failed to fetch groups: ${response.statusText}`);
     }
     
-    const groups: any[] = await response.json();
+    const data = await response.json();
+    const groups = Array.isArray(data) ? data : [];
     
     return groups.map((g: any) => ({
       JID: g.JID,
