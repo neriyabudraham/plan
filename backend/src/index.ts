@@ -16,6 +16,9 @@ import recurringRoutes from './routes/recurring';
 
 const app = express();
 
+// Trust proxy (for nginx)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: false,
@@ -27,6 +30,7 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
   message: { error: 'יותר מדי בקשות, נסה שוב מאוחר יותר' },
+  validate: { xForwardedForHeader: false },
 });
 
 app.use('/api/', limiter);

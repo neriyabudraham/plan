@@ -10,7 +10,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3955
-      - DATABASE_URL=postgresql://planit:${DB_PASSWORD}@host.docker.internal:5432/planit?schema=public
+      - DATABASE_URL=postgresql://planit:${DB_PASSWORD}@172.17.0.1:5432/planit
       - JWT_SECRET=${JWT_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
