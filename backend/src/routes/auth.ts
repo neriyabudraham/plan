@@ -36,12 +36,12 @@ const generateTokens = (user: User) => {
   };
   
   const accessToken = jwt.sign(payload, config.jwt.secret, {
-    expiresIn: config.jwt.expiresIn,
-  });
+    expiresIn: '15m',
+  } as jwt.SignOptions);
   
   const refreshToken = jwt.sign(payload, config.jwt.refreshSecret, {
-    expiresIn: config.jwt.refreshExpiresIn,
-  });
+    expiresIn: '7d',
+  } as jwt.SignOptions);
   
   return { accessToken, refreshToken };
 };
@@ -115,7 +115,7 @@ router.post('/google', async (req, res) => {
       return res.status(401).json({ error: 'טוקן Google לא תקין' });
     }
     
-    const googleUser = await googleResponse.json();
+    const googleUser: any = await googleResponse.json();
     
     if (googleUser.aud !== config.google.clientId) {
       return res.status(401).json({ error: 'Client ID לא תואם' });
