@@ -249,7 +249,10 @@ export interface SimulationParams {
   start_date: string;
   end_date?: string;
   end_age?: number;
+  target_member_id?: string;
   inflation_rate?: number;
+  include_planned_children?: boolean;
+  extra_monthly_deposit?: number;
   planned_children?: PlannedChild[];
   extra_deposits?: ExtraDeposit[];
   withdrawal_events?: WithdrawalEvent[];
@@ -327,6 +330,9 @@ export interface WhatsAppSettings {
   is_active: boolean;
   notify_on_milestone: boolean;
   notify_on_goal_reached: boolean;
+  notify_on_target_reached: boolean;
+  notify_on_deposit: boolean;
+  notify_on_withdrawal: boolean;
   notify_monthly_summary: boolean;
   created_at: Date;
   updated_at: Date;
@@ -338,14 +344,18 @@ export interface WhatsAppSettings {
 
 export interface DashboardStats {
   total_assets: number;
+  totalBalance: number;
   total_goals: number;
   total_goal_progress: number;
   monthly_deposits: number;
+  monthlyDeposits: number;
   monthly_withdrawals: number;
+  monthlyWithdrawals: number;
   projected_value_1y: number;
   projected_value_5y: number;
   children_count: number;
   planned_children_count: number;
+  fundsProgress: FundProgress[];
   next_milestone?: {
     name: string;
     goal_name: string;
@@ -377,4 +387,75 @@ export interface PaginatedResponse<T> {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+// ============================================
+// LEGACY TYPES (backward compatibility)
+// ============================================
+
+export interface Fund {
+  id: string;
+  user_id: string;
+  name: string;
+  description?: string;
+  target_amount: number;
+  current_balance: number;
+  currency: string;
+  target_date?: Date;
+  icon: string;
+  color: string;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface Transaction {
+  id: string;
+  fund_id: string;
+  amount: number;
+  type: TransactionType;
+  description?: string;
+  transaction_date: Date;
+  balance_after?: number;
+  created_by?: string;
+  created_at: Date;
+  fund_name?: string;
+  fund_icon?: string;
+  fund_color?: string;
+  fund_currency?: string;
+}
+
+export interface RecurringDeposit {
+  id: string;
+  fund_id: string;
+  amount: number;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  day_of_month?: number;
+  day_of_week?: number;
+  description?: string;
+  is_active: boolean;
+  next_run: Date;
+  last_run?: Date;
+  created_by?: string;
+  created_at: Date;
+  updated_at: Date;
+  fund_name?: string;
+  fund_icon?: string;
+  fund_color?: string;
+}
+
+export interface FundProgress {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  currentBalance: number;
+  targetAmount: number;
+  progressPercent: number;
+  currency: string;
+}
+
+export interface WhatsAppGroup {
+  id: string;
+  name: string;
 }
