@@ -250,19 +250,9 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
         
         if (shouldApply) {
           totalChildExpenses += expenseAmount;
-          events.push(`${item.name} - ${child.name} (₪${Math.round(expenseAmount).toLocaleString()})`);
-          
-          // Withdraw from assets (spread across if needed)
-          let remaining = expenseAmount;
-          for (const asset of assets) {
-            if (remaining <= 0) break;
-            const available = Math.min(assetBalances[asset.id], remaining);
-            if (available > 0) {
-              assetBalances[asset.id] -= available;
-              totalWithdrawals += available;
-              remaining -= available;
-            }
-          }
+          events.push(`👶 ${child.name}: ${item.name} (₪${Math.round(expenseAmount).toLocaleString()})`);
+          // Child expenses are tracked but NOT withdrawn from assets.
+          // They represent projected costs that should be planned for via goals.
         }
       }
     }
@@ -378,6 +368,92 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
   // Real returns calculation
   const totalReturnsReal = totalReturns / totalInflationFactor;
   
+  // Child expenses projection - aggregate all expenses per child into milestones
+  const childProjections: {
+    child_name: string;
+    milestones: {
+      name: string;
+      expected_age: number;
+      expected_date: string;
+      total_cost: number;
+      total_cost_real: number;
+      months_until: number;
+      monthly_saving_needed: number;
+    }[];
+    total_cost: number;
+    total_monthly_needed: number;
+  }[] = [];
+
+  for (const childData of childExpenseItems) {
+    const child = familyMembers.find(m => m.id === childData.child_id);
+    if (!child) continue;
+    
+    const birthDate = child.birth_date
+      ? new Date(child.birth_date)
+      : child.expected_birth_date
+        ? new Date(child.expected_birth_date)
+        : null;
+    if (!birthDate) continue;
+
+    const milestones: typeof childProjections[0]['milestones'] = [];
+
+    for (const item of childData.items) {
+      const triggerAge = Number(item.trigger_value);
+      const triggerEnd = item.trigger_value_end ? Number(item.trigger_value_end) : triggerAge;
+      const amount = Number(item.amount);
+      
+      let totalForItem = 0;
+      if (item.frequency === 'once') {
+        totalForItem = amount;
+      } else if (item.frequency === 'monthly') {
+        const durationMonths = item.trigger_type === 'age_months'
+          ? (triggerEnd - triggerAge + 1)
+          : (triggerEnd - triggerAge + 1) * 12;
+        totalForItem = amount * durationMonths;
+      } else if (item.frequency === 'yearly') {
+        totalForItem = amount * (triggerEnd - triggerAge + 1);
+      } else if (item.frequency === 'quarterly') {
+        totalForItem = amount * (triggerEnd - triggerAge + 1) * 4;
+      }
+
+      const expectedDate = new Date(birthDate);
+      if (item.trigger_type === 'age_months') {
+        expectedDate.setMonth(expectedDate.getMonth() + triggerAge);
+      } else {
+        expectedDate.setFullYear(expectedDate.getFullYear() + triggerAge);
+      }
+
+      const monthsUntil = Math.max(0, Math.round(
+        (expectedDate.getTime() - new Date().getTime()) / (30.44 * 24 * 60 * 60 * 1000)
+      ));
+
+      const yearsUntil = monthsUntil / 12;
+      const costWithInflation = totalForItem * Math.pow(1 + inflationRate / 100, yearsUntil);
+      const monthlySaving = monthsUntil > 0 ? Math.ceil(totalForItem / monthsUntil) : totalForItem;
+
+      milestones.push({
+        name: item.name,
+        expected_age: triggerAge,
+        expected_date: expectedDate.toISOString().split('T')[0],
+        total_cost: Math.round(totalForItem),
+        total_cost_real: Math.round(costWithInflation),
+        months_until: monthsUntil,
+        monthly_saving_needed: monthlySaving,
+      });
+    }
+
+    milestones.sort((a, b) => a.expected_age - b.expected_age);
+    const totalCost = milestones.reduce((s, m) => s + m.total_cost, 0);
+    const totalMonthly = milestones.filter(m => m.months_until > 0).reduce((s, m) => s + m.monthly_saving_needed, 0);
+
+    childProjections.push({
+      child_name: child.name,
+      milestones,
+      total_cost: totalCost,
+      total_monthly_needed: totalMonthly,
+    });
+  }
+
   // Goals analysis
   const goalsAnalysis = goals.map(goal => {
     const targetDate = goal.target_date ? new Date(goal.target_date) : null;
@@ -429,6 +505,7 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
       total_inflation_factor: Math.round(totalInflationFactor * 1000) / 1000,
     },
     goals_analysis: goalsAnalysis,
+    child_projections: childProjections,
   };
 }
 

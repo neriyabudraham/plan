@@ -773,6 +773,54 @@ export default function Simulator() {
             </div>
           )}
 
+          {/* Child Expense Projections */}
+          {results.child_projections?.length > 0 && (
+            <div className="card p-5">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                👶 תחזית הוצאות ילדים
+              </h3>
+              <div className="space-y-6">
+                {results.child_projections.map((child, ci) => (
+                  <div key={ci}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-bold text-lg text-gray-900 dark:text-white">{child.child_name}</h4>
+                      <div className="text-sm text-gray-500">
+                        סה״כ: <span className="font-bold text-primary-600">{fmt(child.total_cost)}</span>
+                        {child.total_monthly_needed > 0 && (
+                          <span className="mr-3">| נדרש: <span className="font-bold text-amber-600">{fmt(child.total_monthly_needed)}/חודש</span></span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {child.milestones.map((m, mi) => {
+                        const yearsUntil = Math.floor(m.months_until / 12);
+                        const isPast = m.months_until <= 0;
+                        return (
+                          <div key={mi} className={`p-3 rounded-xl text-sm ${isPast ? 'bg-gray-100 dark:bg-gray-800 opacity-60' : 'bg-blue-50 dark:bg-blue-900/20'}`}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-medium">{m.name}</span>
+                              <span className="text-xs text-gray-500">גיל {m.expected_age}</span>
+                            </div>
+                            <div className="font-bold text-primary-600">{fmt(m.total_cost)}</div>
+                            {!isPast && m.months_until > 0 && (
+                              <div className="mt-1 text-xs">
+                                <span className="text-gray-500">בעוד {yearsUntil > 0 ? `${yearsUntil} שנים` : `${m.months_until} חודשים`}</span>
+                                <span className="text-amber-600 font-medium mr-2">
+                                  {fmt(m.monthly_saving_needed)}/חודש
+                                </span>
+                              </div>
+                            )}
+                            {isPast && <div className="text-xs text-gray-400 mt-1">כבר עבר</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Scenarios */}
           {scenarios.length > 0 && (
             <div className="card p-5">
