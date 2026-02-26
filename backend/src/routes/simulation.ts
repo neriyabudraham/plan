@@ -287,33 +287,16 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
       }
     }
     
-    // Process yearly expenses (e.g., annual vacation)
+    // Process yearly expenses (e.g., annual vacation) - tracked only, not withdrawn
     for (const yearlyExpense of params.yearly_expenses || []) {
-      // Check if this is the month for this yearly expense (default to July = 7)
       const expenseMonth = yearlyExpense.month ?? 7;
       if ((month + 1) === expenseMonth) {
         let expenseAmount = yearlyExpense.amount;
-        
-        // Adjust for inflation if needed (default true)
         if (yearlyExpense.adjust_for_inflation !== false) {
           expenseAmount = yearlyExpense.amount * inflationFactor;
         }
-        
-        // Withdraw from assets
-        let remaining = expenseAmount;
-        for (const asset of assets) {
-          if (remaining <= 0) break;
-          const available = Math.min(assetBalances[asset.id], remaining);
-          if (available > 0) {
-            assetBalances[asset.id] -= available;
-            remaining -= available;
-          }
-        }
-        
-        totalWithdrawals += expenseAmount - remaining;
-        if (remaining < expenseAmount) {
-          events.push(`${yearlyExpense.name} (₪${Math.round(expenseAmount - remaining).toLocaleString()})`);
-        }
+        // Yearly expenses come from income/cash, not from investment assets
+        events.push(`📅 ${yearlyExpense.name} (₪${Math.round(expenseAmount).toLocaleString()})`);
       }
     }
     
