@@ -307,6 +307,7 @@ export interface FinancialGoal {
   target_date?: string;
   target_age?: number;
   monthly_contribution: number;
+  expected_return_rate: number;
   priority: number;
   icon: string;
   color: string;

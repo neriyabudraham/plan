@@ -346,6 +346,7 @@ const initDatabase = async () => {
         target_age INTEGER,
         
         monthly_contribution DECIMAL(15,2) DEFAULT 0,
+        expected_return_rate DECIMAL(5,2) DEFAULT 0,
         priority INTEGER DEFAULT 5,
         
         icon VARCHAR(50) DEFAULT '🎯',
@@ -500,6 +501,7 @@ const initDatabase = async () => {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_assets_owner_id ON assets(owner_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_asset_transactions_asset_id ON asset_transactions(asset_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_asset_transactions_date ON asset_transactions(transaction_date);`);
+    await client.query(`ALTER TABLE financial_goals ADD COLUMN IF NOT EXISTS expected_return_rate DECIMAL(5,2) DEFAULT 0;`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_financial_goals_user_id ON financial_goals(user_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_recurring_transactions_next_run ON recurring_transactions(next_run);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);`);

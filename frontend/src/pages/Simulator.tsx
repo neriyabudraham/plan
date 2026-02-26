@@ -14,7 +14,7 @@ import NumberInput from '../components/common/NumberInput';
 
 const PIE_COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#06B6D4', '#84CC16'];
 
-type ViewTab = 'chart' | 'yearly' | 'breakdown';
+type ViewTab = 'chart' | 'yearly' | 'breakdown' | 'monthly';
 
 export default function Simulator() {
   const [loading, setLoading] = useState(true);
@@ -201,6 +201,48 @@ export default function Simulator() {
 
   const selectedYear = yearlyData[selectedYearIndex];
 
+  // Monthly data for selected year
+  const monthlyData = useMemo(() => {
+    if (!results?.timeline.length || !selectedYear) return [];
+    const startIdx = selectedYearIndex * 12;
+    const months: string[] = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+    const data = [];
+
+    for (let i = startIdx; i < Math.min(startIdx + 12, results.timeline.length); i++) {
+      const point = results.timeline[i];
+      const prev = i > 0 ? results.timeline[i - 1] : null;
+      const monthIdx = new Date(point.date).getMonth();
+
+      const monthBreakdown = Object.entries(point.assets_breakdown)
+        .filter(([_, v]) => v > 0)
+        .map(([id, value]) => {
+          const asset = assets.find(a => a.id === id);
+          const prevVal = prev ? (prev.assets_breakdown[id] || 0) : value;
+          return {
+            id,
+            name: asset?.name || id.slice(0, 6),
+            icon: asset?.icon || '💰',
+            value: Math.round(value),
+            change: Math.round(value - prevVal),
+          };
+        })
+        .sort((a, b) => b.value - a.value);
+
+      data.push({
+        month: months[monthIdx],
+        date: point.date,
+        total: point.total_assets,
+        deposits: prev ? point.total_deposits - prev.total_deposits : 0,
+        returns: prev ? point.total_returns - prev.total_returns : 0,
+        fees: prev ? point.total_fees - prev.total_fees : 0,
+        income: point.monthly_income,
+        events: point.events,
+        breakdown: monthBreakdown,
+      });
+    }
+    return data;
+  }, [results, selectedYearIndex, selectedYear, assets]);
+
   const chartData = useMemo(() =>
     yearlyData.map(y => ({
       age: y.age,
@@ -350,6 +392,7 @@ export default function Simulator() {
             {[
               { id: 'chart' as ViewTab, label: 'גרף צמיחה' },
               { id: 'yearly' as ViewTab, label: 'השוואה שנתית' },
+              { id: 'monthly' as ViewTab, label: 'פירוט חודשי' },
               { id: 'breakdown' as ViewTab, label: 'פילוח נכסים' },
             ].map(tab => (
               <button
@@ -465,6 +508,85 @@ export default function Simulator() {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'monthly' && selectedYear && (
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                  פירוט חודשי - {selectedYear.year} (גיל {selectedYear.age})
+                </h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-right py-2 px-3 font-medium text-gray-500">חודש</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-500">הון כולל</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-500">הפקדות</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-500">תשואות</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-500">עמלות</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-500">הכנסה</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-500">אירועים</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monthlyData.map((m, i) => (
+                        <tr key={i} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                          <td className="py-2.5 px-3 font-medium">{m.month}</td>
+                          <td className="py-2.5 px-3 font-bold text-emerald-600">{fmt(Math.round(m.total))}</td>
+                          <td className="py-2.5 px-3 text-blue-600">+{fmt(Math.round(m.deposits))}</td>
+                          <td className="py-2.5 px-3 text-purple-600">+{fmt(Math.round(m.returns))}</td>
+                          <td className="py-2.5 px-3 text-red-500">-{fmt(Math.round(m.fees))}</td>
+                          <td className="py-2.5 px-3">{fmt(Math.round(m.income))}</td>
+                          <td className="py-2.5 px-3">
+                            {m.events.length > 0 && (
+                              <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">{m.events.length} אירועים</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Per-asset monthly breakdown */}
+                {monthlyData.length > 0 && monthlyData[0].breakdown.length > 1 && (
+                  <div className="mt-6">
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-3">פירוט לפי קופה</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200 dark:border-gray-700">
+                            <th className="text-right py-2 px-3 font-medium text-gray-500">חודש</th>
+                            {monthlyData[0].breakdown.map(a => (
+                              <th key={a.id} className="text-right py-2 px-2 font-medium text-gray-500">
+                                <span className="text-base ml-1">{a.icon}</span>
+                                {a.name.length > 12 ? a.name.slice(0, 12) + '...' : a.name}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {monthlyData.map((m, i) => (
+                            <tr key={i} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                              <td className="py-2 px-3 font-medium">{m.month}</td>
+                              {m.breakdown.map(a => (
+                                <td key={a.id} className="py-2 px-2">
+                                  <div className="font-medium">{fmt(a.value)}</div>
+                                  {a.change !== 0 && (
+                                    <div className={`text-xs ${a.change > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                      {a.change > 0 ? '+' : ''}{fmt(a.change)}
+                                    </div>
+                                  )}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

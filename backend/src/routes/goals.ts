@@ -22,6 +22,7 @@ const goalSchema = z.object({
   target_date: z.string().optional(),
   target_age: z.number().int().min(0).optional(),
   monthly_contribution: z.number().min(0).default(0),
+  expected_return_rate: z.number().min(0).max(50).default(0),
   priority: z.number().int().min(1).max(10).default(5),
   icon: z.string().default('🎯'),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default('#10B981'),
@@ -158,8 +159,8 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     const result = await query<FinancialGoal>(
       `INSERT INTO financial_goals 
        (id, user_id, linked_member_id, linked_asset_id, name, goal_type, target_amount, 
-        current_amount, currency, target_date, target_age, monthly_contribution, priority, icon, color, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        current_amount, currency, target_date, target_age, monthly_contribution, expected_return_rate, priority, icon, color, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
        RETURNING *`,
       [
         uuidv4(),
@@ -174,6 +175,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
         data.target_date || null,
         data.target_age || null,
         data.monthly_contribution,
+        data.expected_return_rate || 0,
         data.priority,
         data.icon,
         data.color,
@@ -210,12 +212,13 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
         target_date = COALESCE($8, target_date),
         target_age = COALESCE($9, target_age),
         monthly_contribution = COALESCE($10, monthly_contribution),
-        priority = COALESCE($11, priority),
-        icon = COALESCE($12, icon),
-        color = COALESCE($13, color),
-        notes = COALESCE($14, notes),
+        expected_return_rate = COALESCE($11, expected_return_rate),
+        priority = COALESCE($12, priority),
+        icon = COALESCE($13, icon),
+        color = COALESCE($14, color),
+        notes = COALESCE($15, notes),
         updated_at = NOW()
-       WHERE id = $15 AND user_id = $16
+       WHERE id = $16 AND user_id = $17
        RETURNING *`,
       [
         data.linked_member_id,
@@ -228,6 +231,7 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
         data.target_date,
         data.target_age,
         data.monthly_contribution,
+        data.expected_return_rate,
         data.priority,
         data.icon,
         data.color,
