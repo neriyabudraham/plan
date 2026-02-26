@@ -262,6 +262,30 @@ const initDatabase = async () => {
     `);
 
     // ============================================
+    // SAVINGS POTS - קופות חיסכון קטנות
+    // ============================================
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS savings_pots (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        target_amount DECIMAL(15,2) NOT NULL,
+        current_amount DECIMAL(15,2) DEFAULT 0,
+        monthly_contribution DECIMAL(15,2) DEFAULT 0,
+        target_date DATE,
+        icon VARCHAR(50) DEFAULT '🎯',
+        color VARCHAR(7) DEFAULT '#8B5CF6',
+        is_completed BOOLEAN DEFAULT false,
+        completed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_savings_pots_user_id ON savings_pots(user_id);`);
+
+    // ============================================
     // ASSET TRANSACTIONS - תנועות בנכסים
     // ============================================
     

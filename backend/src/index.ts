@@ -13,6 +13,7 @@ import childTemplatesRoutes from './routes/childTemplates';
 import assetsRoutes from './routes/assets';
 import goalsRoutes from './routes/goals';
 import simulationRoutes from './routes/simulation';
+import savingsPotsRoutes from './routes/savingsPots';
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use('/api/child-templates', childTemplatesRoutes);
 app.use('/api/assets', assetsRoutes);
 app.use('/api/goals', goalsRoutes);
 app.use('/api/simulation', simulationRoutes);
+app.use('/api/savings-pots', savingsPotsRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

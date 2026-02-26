@@ -228,6 +228,36 @@ export interface AssetsSummary {
 }
 
 // ============================================
+// SAVINGS POTS - קופות קטנות
+// ============================================
+
+export interface SavingsPot {
+  id: string;
+  user_id: string;
+  name: string;
+  target_amount: number;
+  current_amount: number;
+  monthly_contribution: number;
+  target_date?: string;
+  icon: string;
+  color: string;
+  is_completed: boolean;
+  completed_at?: string;
+  created_at: string;
+  progress_percent?: number;
+  months_remaining?: number;
+  required_monthly?: number;
+}
+
+export interface SavingsPotsSummary {
+  total_pots: number;
+  completed_pots: number;
+  total_saved: number;
+  total_target: number;
+  total_monthly: number;
+}
+
+// ============================================
 // GOALS
 // ============================================
 

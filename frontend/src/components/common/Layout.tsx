@@ -13,6 +13,7 @@ import {
   ArrowRightOnRectangleIcon,
   MoonIcon,
   SunIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'משפחה', href: '/family', icon: UserGroupIcon },
   { name: 'תבניות עלויות', href: '/child-templates', icon: DocumentTextIcon },
   { name: 'נכסים והשקעות', href: '/assets', icon: BanknotesIcon },
+  { name: 'קופות חיסכון', href: '/savings-pots', icon: SparklesIcon },
   { name: 'יעדים', href: '/goals', icon: FlagIcon },
   { name: 'סימולטור', href: '/simulator', icon: ChartBarIcon },
   { name: 'הגדרות', href: '/settings', icon: Cog6ToothIcon },

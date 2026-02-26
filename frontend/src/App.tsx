@@ -14,6 +14,7 @@ import Assets from './pages/Assets';
 import AssetDetails from './pages/AssetDetails';
 import Goals from './pages/Goals';
 import Simulator from './pages/Simulator';
+import SavingsPots from './pages/SavingsPots';
 import Settings from './pages/Settings';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -66,6 +67,7 @@ export default function App() {
         <Route path="assets" element={<Assets />} />
         <Route path="assets/:id" element={<AssetDetails />} />
         <Route path="goals" element={<Goals />} />
+        <Route path="savings-pots" element={<SavingsPots />} />
         <Route path="simulator" element={<Simulator />} />
         <Route path="settings" element={<Settings />} />
       </Route>

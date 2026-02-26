@@ -158,6 +158,27 @@ export interface Asset {
   linked_child_name?: string;
 }
 
+export interface SavingsPot {
+  id: string;
+  user_id: string;
+  name: string;
+  target_amount: number;
+  current_amount: number;
+  monthly_contribution: number;
+  target_date?: Date;
+  icon: string;
+  color: string;
+  is_completed: boolean;
+  completed_at?: Date;
+  created_at: Date;
+  updated_at: Date;
+  
+  // Computed
+  progress_percent?: number;
+  months_remaining?: number;
+  required_monthly?: number;
+}
+
 export interface AssetTransaction {
   id: string;
   asset_id: string;
