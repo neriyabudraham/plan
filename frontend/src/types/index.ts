@@ -228,6 +228,39 @@ export interface AssetsSummary {
 }
 
 // ============================================
+// FAMILY SHARING - שיתוף משפחתי
+// ============================================
+
+export interface FamilyShare {
+  id: string;
+  owner_id: string;
+  shared_with_id: string;
+  role: 'admin' | 'editor' | 'viewer';
+  is_active: boolean;
+  created_at: string;
+  shared_user_name?: string;
+  shared_user_email?: string;
+  owner_name?: string;
+  owner_email?: string;
+  family_name?: string;
+}
+
+export interface ShareInvite {
+  id: string;
+  email: string;
+  role: 'admin' | 'editor' | 'viewer';
+  expires_at: string;
+  used: boolean;
+  created_at: string;
+}
+
+export const ROLE_LABELS: Record<string, string> = {
+  admin: 'מנהל',
+  editor: 'עורך',
+  viewer: 'צופה',
+};
+
+// ============================================
 // SAVINGS POTS - קופות קטנות
 // ============================================
 

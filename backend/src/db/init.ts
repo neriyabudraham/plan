@@ -435,6 +435,25 @@ const initDatabase = async () => {
     `);
 
     // ============================================
+    // FAMILY SHARING - שיתוף משפחתי
+    // ============================================
+    
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS family_shares (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        shared_with_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        role user_role DEFAULT 'editor',
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(owner_id, shared_with_id)
+      );
+    `);
+    
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_family_shares_owner ON family_shares(owner_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_family_shares_shared ON family_shares(shared_with_id);`);
+
+    // ============================================
     // INVITATION TOKENS
     // ============================================
     

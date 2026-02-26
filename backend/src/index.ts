@@ -9,6 +9,7 @@ import { testConnection } from './db/pool';
 // Routes
 import authRoutes from './routes/auth';
 import familyRoutes from './routes/family';
+import familyShareRoutes from './routes/familyShare';
 import childTemplatesRoutes from './routes/childTemplates';
 import assetsRoutes from './routes/assets';
 import goalsRoutes from './routes/goals';
@@ -51,6 +52,7 @@ app.use(express.urlencoded({ extended: true }));
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/family', familyRoutes);
+app.use('/api/family-share', familyShareRoutes);
 app.use('/api/child-templates', childTemplatesRoutes);
 app.use('/api/assets', assetsRoutes);
 app.use('/api/goals', goalsRoutes);
