@@ -6,6 +6,7 @@ import api, { handleApiError } from '../services/api';
 import { Asset, AssetTransaction, TransactionType, ASSET_TYPE_LABELS } from '../types';
 import Loading from '../components/common/Loading';
 import Modal from '../components/common/Modal';
+import NumberInput from '../components/common/NumberInput';
 
 const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   deposit: 'הפקדה',
@@ -243,7 +244,7 @@ export default function AssetDetails() {
           </div>
           <div>
             <label className="label">סכום (₪)</label>
-            <input type="number" value={transactionForm.amount} onChange={e => setTransactionForm({...transactionForm, amount: Number(e.target.value)})} className="input" min="0" required />
+            <NumberInput value={transactionForm.amount} onChange={v => setTransactionForm({...transactionForm, amount: v})} min={0} className="input" />
           </div>
           <div>
             <label className="label">תאריך</label>
@@ -274,19 +275,19 @@ export default function AssetDetails() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">הפקדה חודשית (₪)</label>
-              <input type="number" value={editForm.monthly_deposit} onChange={e => setEditForm({...editForm, monthly_deposit: Number(e.target.value)})} className="input" min="0" />
+              <NumberInput value={editForm.monthly_deposit} onChange={v => setEditForm({...editForm, monthly_deposit: v})} min={0} className="input" />
             </div>
             <div>
               <label className="label">הפקדת מעסיק (₪)</label>
-              <input type="number" value={editForm.employer_deposit} onChange={e => setEditForm({...editForm, employer_deposit: Number(e.target.value)})} className="input" min="0" />
+              <NumberInput value={editForm.employer_deposit} onChange={v => setEditForm({...editForm, employer_deposit: v})} min={0} className="input" />
             </div>
             <div>
               <label className="label">תשואה שנתית (%)</label>
-              <input type="number" value={editForm.expected_annual_return} onChange={e => setEditForm({...editForm, expected_annual_return: Number(e.target.value)})} className="input" step="0.1" />
+              <NumberInput value={editForm.expected_annual_return} onChange={v => setEditForm({...editForm, expected_annual_return: v})} allowDecimal className="input" />
             </div>
             <div>
               <label className="label">דמי ניהול (%)</label>
-              <input type="number" value={editForm.management_fee_percent} onChange={e => setEditForm({...editForm, management_fee_percent: Number(e.target.value)})} className="input" min="0" step="0.01" />
+              <NumberInput value={editForm.management_fee_percent} onChange={v => setEditForm({...editForm, management_fee_percent: v})} min={0} allowDecimal className="input" />
             </div>
           </div>
           <div className="flex gap-3">

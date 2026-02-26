@@ -102,17 +102,22 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
       endDate = new Date(targetMember.birth_date);
       endDate.setFullYear(endDate.getFullYear() + params.end_age);
     } else {
-      // Default: calculate from current date + years until retirement age
+      // No birth date - use end_age as years from now
+      // e.g. if end_age = 67 and user is ~30, simulate 37 years
+      // If we don't know the age, just simulate until end_age years from now
+      const yearsToSimulate = Math.max(params.end_age - 25, 30); // At least 30 years
       endDate = new Date(startDate);
-      endDate.setFullYear(endDate.getFullYear() + params.end_age - 30); // Assume starting at ~30
+      endDate.setFullYear(endDate.getFullYear() + yearsToSimulate);
     }
   } else {
     endDate = new Date(startDate);
     endDate.setFullYear(endDate.getFullYear() + 30);
   }
   
-  // Make sure we have at least some simulation time
-  if (endDate <= startDate) {
+  // Make sure we have at least 1 year of simulation
+  const minEndDate = new Date(startDate);
+  minEndDate.setFullYear(minEndDate.getFullYear() + 1);
+  if (endDate <= minEndDate) {
     endDate = new Date(startDate);
     endDate.setFullYear(endDate.getFullYear() + 30);
   }
