@@ -198,52 +198,68 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
       const ageYears = Math.floor(ageMonths / 12);
       
       for (const item of childData.items) {
-        let shouldApply = false;
+        let inRange = false;
         
         switch (item.trigger_type) {
           case 'age_months':
             if (item.trigger_value_end) {
-              shouldApply = ageMonths >= item.trigger_value && ageMonths <= item.trigger_value_end;
+              inRange = ageMonths >= item.trigger_value && ageMonths <= item.trigger_value_end;
             } else {
-              shouldApply = ageMonths === item.trigger_value;
+              inRange = ageMonths === item.trigger_value;
             }
             break;
           case 'age_years':
             if (item.trigger_value_end) {
-              shouldApply = ageYears >= item.trigger_value && ageYears <= item.trigger_value_end;
+              inRange = ageYears >= item.trigger_value && ageYears <= item.trigger_value_end;
             } else {
-              shouldApply = ageYears === item.trigger_value;
+              inRange = ageYears === item.trigger_value;
             }
             break;
           case 'event':
-            // Events trigger once at specific age (in years)
-            shouldApply = ageYears === item.trigger_value && currentDate.getMonth() === birthDate.getMonth();
+            inRange = ageYears === item.trigger_value && currentDate.getMonth() === birthDate.getMonth();
+            break;
+        }
+        
+        if (!inRange) continue;
+        
+        let expenseAmount = Number(item.amount) * inflationFactor;
+        let shouldApply = false;
+        
+        switch (item.frequency) {
+          case 'monthly':
+            shouldApply = true;
+            break;
+          case 'yearly':
+            shouldApply = currentDate.getMonth() === birthDate.getMonth();
+            break;
+          case 'quarterly':
+            shouldApply = month % 3 === 0;
+            break;
+          case 'once':
+            // For one-time costs: apply once at the start of the range
+            if (item.trigger_type === 'age_months') {
+              shouldApply = ageMonths === item.trigger_value;
+            } else if (item.trigger_type === 'age_years') {
+              shouldApply = ageYears === item.trigger_value && currentDate.getMonth() === birthDate.getMonth();
+            } else {
+              shouldApply = true; // event type
+            }
             break;
         }
         
         if (shouldApply) {
-          let expenseAmount = Number(item.amount) * inflationFactor;
-          
-          // For monthly expenses, apply monthly
-          if (item.frequency === 'monthly') {
-            // Already monthly
-          } else if (item.frequency === 'yearly') {
-            // Only apply in birth month
-            if (currentDate.getMonth() !== birthDate.getMonth()) continue;
-          } else if (item.frequency === 'once') {
-            // Only apply once
-            if (item.trigger_type !== 'event') continue;
-          }
-          
           totalChildExpenses += expenseAmount;
-          events.push(`${item.name} - ${child.name} (₪${expenseAmount.toLocaleString()})`);
+          events.push(`${item.name} - ${child.name} (₪${Math.round(expenseAmount).toLocaleString()})`);
           
-          // Withdraw from first asset with sufficient balance
+          // Withdraw from assets (spread across if needed)
+          let remaining = expenseAmount;
           for (const asset of assets) {
-            if (assetBalances[asset.id] >= expenseAmount) {
-              assetBalances[asset.id] -= expenseAmount;
-              totalWithdrawals += expenseAmount;
-              break;
+            if (remaining <= 0) break;
+            const available = Math.min(assetBalances[asset.id], remaining);
+            if (available > 0) {
+              assetBalances[asset.id] -= available;
+              totalWithdrawals += available;
+              remaining -= available;
             }
           }
         }

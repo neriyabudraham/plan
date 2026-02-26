@@ -142,7 +142,7 @@ export default function Simulator() {
   // Chart data - show yearly data points (every 12 months)
   const chartData = results?.timeline
     .filter((_, i) => i % 12 === 0 || i === results.timeline.length - 1) // Show yearly + last point
-    .map((point, index, arr) => ({
+    .map((point, index) => ({
       year: selfAge ? selfAge + index : new Date(point.date).getFullYear(),
       label: new Date(point.date).toLocaleDateString('he-IL', { year: 'numeric' }),
       assets: showReal ? (point.total_assets_real || point.total_assets) : point.total_assets,
