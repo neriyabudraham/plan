@@ -294,7 +294,7 @@ export interface SimulationParams {
 export interface YearlyExpense {
   name: string;
   amount: number;
-  month?: number; // 1-12
+  month?: number;
   adjust_for_inflation?: boolean;
 }
 

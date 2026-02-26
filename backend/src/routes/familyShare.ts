@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { query } from '../db/pool';
 import { authenticate } from '../middleware/auth';
 import { AuthRequest, UserRole } from '../types/index';
-import { sendInviteEmail } from '../services/email';
+import { sendInvitationEmail } from '../services/email';
 
 const router = Router();
 
@@ -128,7 +128,7 @@ router.post('/invite', authenticate, async (req: AuthRequest, res: Response) => 
     
     // Send email
     try {
-      await sendInviteEmail(email, req.user!.name, token);
+      await sendInvitationEmail(email, req.user!.name, token);
     } catch (emailError) {
       console.error('Failed to send invite email:', emailError);
     }

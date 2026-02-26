@@ -22,9 +22,9 @@ const simulationParamsSchema = z.object({
   yearly_expenses: z.array(z.object({
     name: z.string(),
     amount: z.number(),
-    month: z.number().min(1).max(12).default(7), // Default to July (vacation month)
-    adjust_for_inflation: z.boolean().default(true),
-  })).default([]),
+    month: z.number().min(1).max(12).optional(),
+    adjust_for_inflation: z.boolean().optional(),
+  })).optional(),
   extra_deposits: z.array(z.object({
     date: z.string(),
     amount: z.number(),
@@ -277,12 +277,13 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
     
     // Process yearly expenses (e.g., annual vacation)
     for (const yearlyExpense of params.yearly_expenses || []) {
-      // Check if this is the month for this yearly expense
-      if ((month + 1) === yearlyExpense.month) {
+      // Check if this is the month for this yearly expense (default to July = 7)
+      const expenseMonth = yearlyExpense.month ?? 7;
+      if ((month + 1) === expenseMonth) {
         let expenseAmount = yearlyExpense.amount;
         
-        // Adjust for inflation if needed
-        if (yearlyExpense.adjust_for_inflation) {
+        // Adjust for inflation if needed (default true)
+        if (yearlyExpense.adjust_for_inflation !== false) {
           expenseAmount = yearlyExpense.amount * inflationFactor;
         }
         
