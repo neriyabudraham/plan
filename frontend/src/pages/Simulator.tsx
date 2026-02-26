@@ -16,10 +16,31 @@ const PIE_COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4
 
 type ViewTab = 'chart' | 'yearly' | 'breakdown' | 'monthly';
 
+const STORAGE_KEY_RESULTS = 'sim_results';
+const STORAGE_KEY_PARAMS = 'sim_params';
+
+function loadFromStorage<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch { return fallback; }
+}
+
+const DEFAULT_PARAMS: SimulationParams = {
+  start_date: new Date().toISOString().split('T')[0],
+  end_age: 67,
+  inflation_rate: 2.5,
+  include_planned_children: true,
+  extra_monthly_deposit: 0,
+  yearly_expenses: [],
+  extra_deposits: [],
+  withdrawal_events: [],
+};
+
 export default function Simulator() {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
-  const [results, setResults] = useState<SimulationResults | null>(null);
+  const [results, setResults] = useState<SimulationResults | null>(() => loadFromStorage(STORAGE_KEY_RESULTS, null));
   const [scenarios, setScenarios] = useState<SimulationScenario[]>([]);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -29,22 +50,21 @@ export default function Simulator() {
   const [activeTab, setActiveTab] = useState<ViewTab>('chart');
   const [selectedYearIndex, setSelectedYearIndex] = useState(0);
 
-  const [params, setParams] = useState<SimulationParams>({
-    start_date: new Date().toISOString().split('T')[0],
-    end_age: 67,
-    inflation_rate: 2.5,
-    include_planned_children: true,
-    extra_monthly_deposit: 0,
-    yearly_expenses: [],
-    extra_deposits: [],
-    withdrawal_events: [],
-  });
+  const [params, setParams] = useState<SimulationParams>(() => loadFromStorage(STORAGE_KEY_PARAMS, DEFAULT_PARAMS));
 
   const [saveName, setSaveName] = useState('');
 
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  useEffect(() => {
+    if (results) localStorage.setItem(STORAGE_KEY_RESULTS, JSON.stringify(results));
+  }, [results]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_PARAMS, JSON.stringify(params));
+  }, [params]);
 
   const fetchInitialData = async () => {
     try {
@@ -639,8 +659,8 @@ export default function Simulator() {
             )}
           </div>
 
-          {/* Year Detail + Events */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Year Detail + Fund Breakdown + Events */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Year Detail Card */}
             <div className="card p-5">
               <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
@@ -663,6 +683,49 @@ export default function Simulator() {
                     {showReal && <Row label="הון ריאלי" value={fmt(selectedYear.point.total_assets_real || selectedYear.point.total_assets)} color="text-purple-600" />}
                   </div>
                 </div>
+              )}
+            </div>
+
+            {/* Per-Fund Breakdown */}
+            <div className="card p-5">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-3">פירוט קרנות - גיל {selectedYear?.age}</h3>
+              {selectedYear && pieData.length > 0 ? (
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {pieData.map((item, i) => {
+                    const prevBreakdown = selectedYear.prevPoint?.assets_breakdown || yearlyData[0]?.point.assets_breakdown || {};
+                    const assetId = Object.entries(selectedYear.point.assets_breakdown).find(([_, v]) => Math.round(v) === item.value)?.[0];
+                    const prevVal = assetId ? Math.round(prevBreakdown[assetId] || 0) : 0;
+                    const diff = item.value - prevVal;
+                    const pct = selectedYear.point.total_assets > 0 ? ((item.value / selectedYear.point.total_assets) * 100).toFixed(1) : '0';
+                    return (
+                      <div key={i} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                            <span className="text-sm font-medium">{item.icon} {item.name}</span>
+                          </div>
+                          <span className="text-xs text-gray-400">{pct}%</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-sm">{fmt(item.value)}</span>
+                          {diff !== 0 && (
+                            <span className={`text-xs font-medium ${diff > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                              {diff > 0 ? '+' : ''}{fmt(diff)} השנה
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-emerald-700">סה״כ</span>
+                      <span className="font-bold text-emerald-700">{fmt(selectedYear.point.total_assets)}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 text-center py-8">אין נתוני קרנות</p>
               )}
             </div>
 
@@ -823,6 +886,9 @@ export default function Simulator() {
 
           <div className="flex gap-3 pt-4">
             <button onClick={() => { setIsParamsOpen(false); runSimulation(); }} className="btn-primary flex-1">הרץ סימולציה</button>
+            <button type="button" onClick={() => { setParams({ ...DEFAULT_PARAMS }); toast.success('הוחזר לברירת מחדל'); }} className="text-sm text-gray-500 hover:text-red-500 transition-colors">
+              איפוס
+            </button>
             <button onClick={() => setIsParamsOpen(false)} className="btn-secondary flex-1">סגור</button>
           </div>
         </div>

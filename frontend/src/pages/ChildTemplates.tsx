@@ -136,9 +136,9 @@ export default function ChildTemplates() {
     setItemForm({
       name: item.name,
       trigger_type: item.trigger_type,
-      trigger_value: item.trigger_value,
-      trigger_value_end: item.trigger_value_end,
-      amount: item.amount,
+      trigger_value: Number(item.trigger_value) || 0,
+      trigger_value_end: item.trigger_value_end != null ? Number(item.trigger_value_end) : undefined,
+      amount: Number(item.amount) || 0,
       frequency: item.frequency,
       notes: item.notes || '',
     });
@@ -150,10 +150,17 @@ export default function ChildTemplates() {
     if (!selectedTemplate) return;
     
     try {
+      const data = {
+        ...itemForm,
+        trigger_value: Number(itemForm.trigger_value),
+        trigger_value_end: itemForm.trigger_value_end != null ? Number(itemForm.trigger_value_end) : undefined,
+        amount: Number(itemForm.amount),
+        sort_order: 0,
+      };
       if (editingItem) {
-        await api.put(`/child-templates/${selectedTemplate.id}/items/${editingItem.id}`, itemForm);
+        await api.put(`/child-templates/${selectedTemplate.id}/items/${editingItem.id}`, data);
       } else {
-        await api.post(`/child-templates/${selectedTemplate.id}/items`, itemForm);
+        await api.post(`/child-templates/${selectedTemplate.id}/items`, data);
       }
       toast.success('נשמר');
       setIsItemModalOpen(false);

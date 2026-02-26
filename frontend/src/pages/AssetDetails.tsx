@@ -55,11 +55,11 @@ export default function AssetDetails() {
       setEditForm({
         name: res.data.name,
         institution: res.data.institution || '',
-        expected_annual_return: res.data.expected_annual_return,
-        management_fee_percent: res.data.management_fee_percent,
-        management_fee_deposit_percent: res.data.management_fee_deposit_percent,
-        monthly_deposit: res.data.monthly_deposit,
-        employer_deposit: res.data.employer_deposit,
+        expected_annual_return: Number(res.data.expected_annual_return) || 0,
+        management_fee_percent: Number(res.data.management_fee_percent) || 0,
+        management_fee_deposit_percent: Number(res.data.management_fee_deposit_percent) || 0,
+        monthly_deposit: Number(res.data.monthly_deposit) || 0,
+        employer_deposit: Number(res.data.employer_deposit) || 0,
         notes: res.data.notes || '',
       });
     } catch (error) {
@@ -73,7 +73,10 @@ export default function AssetDetails() {
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post(`/assets/${id}/transactions`, transactionForm);
+      await api.post(`/assets/${id}/transactions`, {
+        ...transactionForm,
+        amount: Number(transactionForm.amount),
+      });
       toast.success('תנועה נוספה');
       setIsTransactionModalOpen(false);
       fetchAsset();
@@ -96,7 +99,14 @@ export default function AssetDetails() {
   const handleUpdateAsset = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.put(`/assets/${id}`, editForm);
+      await api.put(`/assets/${id}`, {
+        ...editForm,
+        expected_annual_return: Number(editForm.expected_annual_return),
+        management_fee_percent: Number(editForm.management_fee_percent),
+        management_fee_deposit_percent: Number(editForm.management_fee_deposit_percent),
+        monthly_deposit: Number(editForm.monthly_deposit),
+        employer_deposit: Number(editForm.employer_deposit),
+      });
       toast.success('עודכן');
       setIsEditModalOpen(false);
       fetchAsset();

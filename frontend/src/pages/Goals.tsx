@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { PlusIcon, PencilIcon, TrashIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect, useMemo } from 'react';
+import { PlusIcon, PencilIcon, TrashIcon, CheckCircleIcon, CalculatorIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolidIcon } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import api, { handleApiError } from '../services/api';
@@ -239,8 +239,43 @@ export default function Goals() {
       )}
       
       {/* Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingGoal ? 'עריכת יעד' : 'יעד חדש'} size="lg">
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <GoalFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        editingGoal={editingGoal}
+        form={form}
+        setForm={setForm}
+        onSubmit={handleSubmit}
+        members={members}
+        assets={assets}
+      />
+    </div>
+  );
+}
+
+function GoalFormModal({ isOpen, onClose, editingGoal, form, setForm, onSubmit, members, assets }: {
+  isOpen: boolean; onClose: () => void; editingGoal: FinancialGoal | null;
+  form: any; setForm: (f: any) => void; onSubmit: (e: React.FormEvent) => void;
+  members: FamilyMember[]; assets: Asset[];
+}) {
+  const calculatedMonthly = useMemo(() => {
+    if (!form.target_date || form.target_amount <= 0) return null;
+    const remaining = form.target_amount - form.current_amount;
+    if (remaining <= 0) return 0;
+    const target = new Date(form.target_date);
+    const now = new Date();
+    const months = Math.max(1, (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth()));
+    if (form.expected_return_rate > 0) {
+      const monthlyRate = form.expected_return_rate / 100 / 12;
+      const factor = Math.pow(1 + monthlyRate, months);
+      return Math.ceil((remaining * monthlyRate) / (factor - 1));
+    }
+    return Math.ceil(remaining / months);
+  }, [form.target_amount, form.current_amount, form.target_date, form.expected_return_rate]);
+
+  return (
+      <Modal isOpen={isOpen} onClose={onClose} title={editingGoal ? 'עריכת יעד' : 'יעד חדש'} size="lg">
+        <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="label">שם היעד</label>
@@ -275,15 +310,34 @@ export default function Goals() {
             </div>
             
             <div>
-              <label className="label">הפקדה חודשית (₪)</label>
-              <NumberInput value={form.monthly_contribution} onChange={v => setForm({...form, monthly_contribution: v})} min={0} className="input" />
-            </div>
-            
-            <div>
               <label className="label">תשואה שנתית צפויה (%)</label>
               <NumberInput value={form.expected_return_rate} onChange={v => setForm({...form, expected_return_rate: v})} min={0} max={50} allowDecimal className="input" />
             </div>
             
+            <div>
+              <label className="label">הפקדה חודשית (₪)</label>
+              <NumberInput value={form.monthly_contribution} onChange={v => setForm({...form, monthly_contribution: v})} min={0} className="input" />
+            </div>
+            
+          {calculatedMonthly !== null && calculatedMonthly > 0 && (
+            <div className="col-span-2 p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CalculatorIcon className="w-5 h-5 text-primary-600" />
+                  <div>
+                    <p className="text-sm font-medium text-primary-700 dark:text-primary-300">
+                      הפקדה חודשית מומלצת{form.expected_return_rate > 0 ? ` (כולל ${form.expected_return_rate}% תשואה)` : ''}:
+                    </p>
+                    <p className="text-lg font-bold text-primary-600">₪{calculatedMonthly.toLocaleString()} / חודש</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setForm({...form, monthly_contribution: calculatedMonthly})} className="btn-primary text-sm px-3 py-1.5">
+                  החל
+                </button>
+              </div>
+            </div>
+          )}
+
             <div>
               <label className="label">משויך לבן משפחה</label>
               <select value={form.linked_member_id} onChange={e => setForm({...form, linked_member_id: e.target.value})} className="input">
@@ -313,11 +367,10 @@ export default function Goals() {
           
           <div className="flex gap-3 pt-4">
             <button type="submit" className="btn-primary flex-1">{editingGoal ? 'שמור' : 'צור'}</button>
-            <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary flex-1">ביטול</button>
+            <button type="button" onClick={onClose} className="btn-secondary flex-1">ביטול</button>
           </div>
         </form>
       </Modal>
-    </div>
   );
 }
 
@@ -394,9 +447,24 @@ function GoalCard({
           </div>
         )}
         
+        {Number(goal.monthly_contribution) > 0 && (
+          <div className="text-sm text-blue-600">
+            הפקדה חודשית: ₪{Number(goal.monthly_contribution).toLocaleString()}
+          </div>
+        )}
+        
+        {Number(goal.expected_return_rate) > 0 && (
+          <div className="text-sm text-purple-600">
+            תשואה צפויה: {Number(goal.expected_return_rate)}%
+          </div>
+        )}
+        
         {goal.required_monthly !== undefined && goal.required_monthly > 0 && !isAchieved && (
-          <div className="text-sm text-primary-600 font-medium">
-            נדרש: ₪{goal.required_monthly.toLocaleString()}/חודש
+          <div className={`text-sm font-medium ${Number(goal.monthly_contribution) >= goal.required_monthly ? 'text-emerald-600' : 'text-amber-600'}`}>
+            {Number(goal.monthly_contribution) >= goal.required_monthly
+              ? `✓ בקצב הנוכחי תגיעו ליעד`
+              : `נדרש: ₪${goal.required_monthly.toLocaleString()}/חודש`
+            }
           </div>
         )}
       </div>

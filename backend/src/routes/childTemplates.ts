@@ -21,7 +21,7 @@ const expenseItemSchema = z.object({
   name: z.string().min(1, 'שם נדרש'),
   trigger_type: z.enum(['age_months', 'age_years', 'event']),
   trigger_value: z.number().int().min(0),
-  trigger_value_end: z.number().int().min(0).optional(),
+  trigger_value_end: z.number().int().min(0).optional().nullable(),
   amount: z.number().min(0),
   frequency: z.enum(['once', 'monthly', 'quarterly', 'yearly']).default('once'),
   notes: z.string().optional(),
