@@ -322,6 +322,24 @@ export interface SimulationResults {
   timeline: TimelinePoint[];
   summary: SimulationSummary;
   goals_analysis: GoalAnalysis[];
+  child_projections: ChildProjection[];
+}
+
+export interface ChildProjectionMilestone {
+  name: string;
+  expected_age: number;
+  expected_date: string;
+  total_cost: number;
+  total_cost_real: number;
+  months_until: number;
+  monthly_saving_needed: number;
+}
+
+export interface ChildProjection {
+  child_name: string;
+  milestones: ChildProjectionMilestone[];
+  total_cost: number;
+  total_monthly_needed: number;
 }
 
 export interface TimelinePoint {
