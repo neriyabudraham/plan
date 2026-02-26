@@ -6,6 +6,7 @@ import api, { handleApiError } from '../services/api';
 import { Asset, AssetsSummary, FamilyMember, AssetType, ASSET_TYPE_LABELS, ASSET_TYPE_ICONS } from '../types';
 import Loading from '../components/common/Loading';
 import Modal from '../components/common/Modal';
+import NumberInput from '../components/common/NumberInput';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
 
@@ -287,34 +288,34 @@ export default function Assets() {
             
             <div>
               <label className="label">יתרה נוכחית (₪)</label>
-              <input type="number" value={form.current_balance} onChange={e => setForm({...form, current_balance: Number(e.target.value)})} className="input" min="0" />
+              <NumberInput value={form.current_balance} onChange={v => setForm({...form, current_balance: v})} min={0} className="input" />
             </div>
             
             <div>
               <label className="label">הפקדה חודשית (₪)</label>
-              <input type="number" value={form.monthly_deposit} onChange={e => setForm({...form, monthly_deposit: Number(e.target.value)})} className="input" min="0" />
+              <NumberInput value={form.monthly_deposit} onChange={v => setForm({...form, monthly_deposit: v})} min={0} className="input" />
             </div>
             
             {(form.asset_type === 'pension' || form.asset_type === 'study_fund') && (
               <div>
                 <label className="label">הפקדת מעסיק (₪)</label>
-                <input type="number" value={form.employer_deposit} onChange={e => setForm({...form, employer_deposit: Number(e.target.value)})} className="input" min="0" />
+                <NumberInput value={form.employer_deposit} onChange={v => setForm({...form, employer_deposit: v})} min={0} className="input" />
               </div>
             )}
             
             <div>
               <label className="label">תשואה שנתית צפויה (%)</label>
-              <input type="number" value={form.expected_annual_return} onChange={e => setForm({...form, expected_annual_return: Number(e.target.value)})} className="input" step="0.1" />
+              <NumberInput value={form.expected_annual_return} onChange={v => setForm({...form, expected_annual_return: v})} allowDecimal className="input" />
             </div>
             
             <div>
               <label className="label">דמי ניהול מצבירה (%)</label>
-              <input type="number" value={form.management_fee_percent} onChange={e => setForm({...form, management_fee_percent: Number(e.target.value)})} className="input" min="0" step="0.01" />
+              <NumberInput value={form.management_fee_percent} onChange={v => setForm({...form, management_fee_percent: v})} min={0} allowDecimal className="input" />
             </div>
             
             <div>
               <label className="label">דמי ניהול מהפקדה (%)</label>
-              <input type="number" value={form.management_fee_deposit_percent} onChange={e => setForm({...form, management_fee_deposit_percent: Number(e.target.value)})} className="input" min="0" step="0.01" />
+              <NumberInput value={form.management_fee_deposit_percent} onChange={v => setForm({...form, management_fee_deposit_percent: v})} min={0} allowDecimal className="input" />
             </div>
             
             <div>

@@ -6,6 +6,7 @@ import api, { handleApiError } from '../services/api';
 import { FinancialGoal, GoalsSummary, GoalType, Asset, FamilyMember, GOAL_TYPE_LABELS, GOAL_TYPE_ICONS } from '../types';
 import Loading from '../components/common/Loading';
 import Modal from '../components/common/Modal';
+import NumberInput from '../components/common/NumberInput';
 
 const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -196,11 +197,12 @@ export default function Goals() {
             ))}
           </div>
         ) : (
-          <div className="card p-12 text-center">
-            <p className="text-gray-500">אין יעדים פעילים</p>
-            <button onClick={() => openAddModal()} className="btn-primary mt-4">
+          <div className="card p-8 md:p-12 text-center flex flex-col items-center">
+            <div className="text-6xl mb-4 opacity-50">🎯</div>
+            <p className="text-gray-500 mb-4">אין יעדים עדיין</p>
+            <button onClick={() => openAddModal()} className="btn-primary">
               <PlusIcon className="w-5 h-5 ml-1" />
-              הוסף יעד ראשון
+              הוסף יעד
             </button>
           </div>
         )}
@@ -246,17 +248,17 @@ export default function Goals() {
             
             <div>
               <label className="label">עדיפות (1-10)</label>
-              <input type="number" value={form.priority} onChange={e => setForm({...form, priority: Number(e.target.value)})} className="input" min="1" max="10" />
+              <NumberInput value={form.priority} onChange={v => setForm({...form, priority: v})} min={1} max={10} className="input" />
             </div>
             
             <div>
               <label className="label">סכום יעד (₪)</label>
-              <input type="number" value={form.target_amount} onChange={e => setForm({...form, target_amount: Number(e.target.value)})} className="input" min="0" required />
+              <NumberInput value={form.target_amount} onChange={v => setForm({...form, target_amount: v})} min={0} className="input" />
             </div>
             
             <div>
               <label className="label">סכום נוכחי (₪)</label>
-              <input type="number" value={form.current_amount} onChange={e => setForm({...form, current_amount: Number(e.target.value)})} className="input" min="0" />
+              <NumberInput value={form.current_amount} onChange={v => setForm({...form, current_amount: v})} min={0} className="input" />
             </div>
             
             <div>
@@ -266,7 +268,7 @@ export default function Goals() {
             
             <div>
               <label className="label">הפקדה חודשית (₪)</label>
-              <input type="number" value={form.monthly_contribution} onChange={e => setForm({...form, monthly_contribution: Number(e.target.value)})} className="input" min="0" />
+              <NumberInput value={form.monthly_contribution} onChange={v => setForm({...form, monthly_contribution: v})} min={0} className="input" />
             </div>
             
             <div>
