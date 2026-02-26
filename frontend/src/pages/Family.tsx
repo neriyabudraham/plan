@@ -3,7 +3,6 @@ import { PlusIcon, PencilIcon, TrashIcon, UserIcon, HeartIcon, SparklesIcon, Ban
 import toast from 'react-hot-toast';
 import api, { handleApiError } from '../services/api';
 import { FamilyMember, FamilySummary, FamilySettings, FamilyMemberType, GenderType, GENDER_LABELS, IncomeRecord, EmploymentType, EMPLOYMENT_TYPE_LABELS } from '../types';
-import NumberInput from '../components/common/NumberInput';
 import Loading from '../components/common/Loading';
 import Modal from '../components/common/Modal';
 

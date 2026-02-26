@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrashIcon, PlusIcon, UserPlusIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, UserPlusIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api, { handleApiError } from '../services/api';
 import { useAuthStore } from '../store/authStore';
