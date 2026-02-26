@@ -773,50 +773,99 @@ export default function Simulator() {
             </div>
           )}
 
-          {/* Child Expense Projections */}
-          {results.child_projections?.length > 0 && (
+          {/* Child Expense Projections - relative to selected year */}
+          {results.child_projections?.length > 0 && selectedYear && (
             <div className="card p-5">
               <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 👶 תחזית הוצאות ילדים
+                <span className="text-sm font-normal text-gray-500">
+                  - נכון לשנת {selectedYear.year} (גיל {selectedYear.age})
+                </span>
               </h3>
               <div className="space-y-6">
-                {results.child_projections.map((child, ci) => (
-                  <div key={ci}>
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-bold text-lg text-gray-900 dark:text-white">{child.child_name}</h4>
-                      <div className="text-sm text-gray-500">
-                        סה״כ: <span className="font-bold text-primary-600">{fmt(child.total_cost)}</span>
-                        {child.total_monthly_needed > 0 && (
-                          <span className="mr-3">| נדרש: <span className="font-bold text-amber-600">{fmt(child.total_monthly_needed)}/חודש</span></span>
-                        )}
+                {results.child_projections.map((child, ci) => {
+                  const selectedDate = new Date(selectedYear.date);
+                  const adjustedMilestones = child.milestones.map(m => {
+                    const eventDate = new Date(m.expected_date);
+                    const monthsDiff = Math.round((eventDate.getTime() - selectedDate.getTime()) / (30.44 * 24 * 60 * 60 * 1000));
+                    const adjustedMonthly = monthsDiff > 0 ? Math.ceil(m.total_cost / monthsDiff) : 0;
+                    return { ...m, monthsFromSelected: monthsDiff, adjustedMonthly };
+                  });
+                  
+                  const futureMilestones = adjustedMilestones.filter(m => m.monthsFromSelected > 0);
+                  const currentMilestones = adjustedMilestones.filter(m => m.monthsFromSelected <= 0 && m.monthsFromSelected > -12);
+                  const pastMilestones = adjustedMilestones.filter(m => m.monthsFromSelected <= -12);
+                  const totalMonthlyFromHere = futureMilestones.reduce((s, m) => s + m.adjustedMonthly, 0);
+                  const totalFutureCost = futureMilestones.reduce((s, m) => s + m.total_cost, 0);
+
+                  return (
+                    <div key={ci}>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-bold text-lg text-gray-900 dark:text-white">{child.child_name}</h4>
+                        <div className="text-sm text-gray-500">
+                          {futureMilestones.length > 0 && (
+                            <>
+                              עלות עתידית: <span className="font-bold text-primary-600">{fmt(totalFutureCost)}</span>
+                              <span className="mr-3">| נדרש מעכשיו: <span className="font-bold text-amber-600">{fmt(totalMonthlyFromHere)}/חודש</span></span>
+                            </>
+                          )}
+                          {futureMilestones.length === 0 && <span className="text-emerald-600 font-medium">כל האירועים עברו</span>}
+                        </div>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {child.milestones.map((m, mi) => {
-                        const yearsUntil = Math.floor(m.months_until / 12);
-                        const isPast = m.months_until <= 0;
-                        return (
-                          <div key={mi} className={`p-3 rounded-xl text-sm ${isPast ? 'bg-gray-100 dark:bg-gray-800 opacity-60' : 'bg-blue-50 dark:bg-blue-900/20'}`}>
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-medium">{m.name}</span>
-                              <span className="text-xs text-gray-500">גיל {m.expected_age}</span>
-                            </div>
-                            <div className="font-bold text-primary-600">{fmt(m.total_cost)}</div>
-                            {!isPast && m.months_until > 0 && (
-                              <div className="mt-1 text-xs">
-                                <span className="text-gray-500">בעוד {yearsUntil > 0 ? `${yearsUntil} שנים` : `${m.months_until} חודשים`}</span>
-                                <span className="text-amber-600 font-medium mr-2">
-                                  {fmt(m.monthly_saving_needed)}/חודש
-                                </span>
+                      
+                      {/* Current/Active milestones */}
+                      {currentMilestones.length > 0 && (
+                        <div className="mb-2">
+                          <p className="text-xs font-medium text-amber-600 mb-1">פעיל עכשיו:</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {currentMilestones.map((m, mi) => (
+                              <div key={mi} className="p-3 rounded-xl text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="font-medium">{m.name}</span>
+                                  <span className="text-xs text-amber-600">גיל ילד {m.expected_age}</span>
+                                </div>
+                                <div className="font-bold text-amber-700">{fmt(m.total_cost)}</div>
                               </div>
-                            )}
-                            {isPast && <div className="text-xs text-gray-400 mt-1">כבר עבר</div>}
+                            ))}
                           </div>
-                        );
-                      })}
+                        </div>
+                      )}
+
+                      {/* Future milestones */}
+                      {futureMilestones.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                          {futureMilestones.map((m, mi) => {
+                            const yrs = Math.floor(m.monthsFromSelected / 12);
+                            const mos = m.monthsFromSelected % 12;
+                            const timeStr = yrs > 0 
+                              ? (mos > 0 ? `${yrs} שנים ו-${mos} חודשים` : `${yrs} שנים`)
+                              : `${m.monthsFromSelected} חודשים`;
+                            return (
+                              <div key={mi} className="p-3 rounded-xl text-sm bg-blue-50 dark:bg-blue-900/20">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="font-medium">{m.name}</span>
+                                  <span className="text-xs text-gray-500">גיל ילד {m.expected_age}</span>
+                                </div>
+                                <div className="font-bold text-primary-600">{fmt(m.total_cost)}</div>
+                                <div className="mt-1 flex items-center justify-between text-xs">
+                                  <span className="text-gray-500">בעוד {timeStr}</span>
+                                  <span className="text-amber-600 font-bold">{fmt(m.adjustedMonthly)}/חודש</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Past milestones (collapsed) */}
+                      {pastMilestones.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-400">{pastMilestones.length} אירועים שכבר עברו</p>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
