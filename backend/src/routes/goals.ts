@@ -34,8 +34,11 @@ const goalSchema = z.object({
 // ============================================
 
 const calculateGoalMetrics = (goal: FinancialGoal): FinancialGoal => {
-  const progressPercent = goal.target_amount > 0 
-    ? Math.round((goal.current_amount / goal.target_amount) * 100) 
+  const targetAmount = Number(goal.target_amount) || 0;
+  const currentAmount = Number(goal.current_amount) || 0;
+
+  const progressPercent = targetAmount > 0 
+    ? Math.round((currentAmount / targetAmount) * 100) 
     : 0;
   
   let monthsRemaining: number | undefined;
@@ -50,7 +53,7 @@ const calculateGoalMetrics = (goal: FinancialGoal): FinancialGoal => {
     );
     
     if (monthsRemaining > 0) {
-      const remaining = goal.target_amount - goal.current_amount;
+      const remaining = targetAmount - currentAmount;
       requiredMonthly = Math.max(0, Math.ceil(remaining / monthsRemaining));
     }
   }
@@ -156,32 +159,38 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const data = goalSchema.parse(req.body);
     
-    const result = await query<FinancialGoal>(
-      `INSERT INTO financial_goals 
-       (id, user_id, linked_member_id, linked_asset_id, name, goal_type, target_amount, 
-        current_amount, currency, target_date, target_age, monthly_contribution, expected_return_rate, priority, icon, color, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-       RETURNING *`,
-      [
-        uuidv4(),
-        req.user!.id,
-        data.linked_member_id || null,
-        data.linked_asset_id || null,
-        data.name,
-        data.goal_type,
-        data.target_amount,
-        data.current_amount,
-        data.currency,
-        data.target_date || null,
-        data.target_age || null,
-        data.monthly_contribution,
-        data.expected_return_rate || 0,
-        data.priority,
-        data.icon,
-        data.color,
-        data.notes || null,
-      ]
-    );
+    const id = uuidv4();
+    const baseParams = [
+      id, req.user!.id, data.linked_member_id || null, data.linked_asset_id || null,
+      data.name, data.goal_type, data.target_amount, data.current_amount,
+      data.currency, data.target_date || null, data.target_age || null,
+      data.monthly_contribution, data.priority, data.icon, data.color, data.notes || null,
+    ];
+    
+    let result;
+    try {
+      result = await query<FinancialGoal>(
+        `INSERT INTO financial_goals 
+         (id, user_id, linked_member_id, linked_asset_id, name, goal_type, target_amount, 
+          current_amount, currency, target_date, target_age, monthly_contribution, expected_return_rate, priority, icon, color, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+         RETURNING *`,
+        [...baseParams.slice(0, 12), data.expected_return_rate || 0, ...baseParams.slice(12)]
+      );
+    } catch (dbErr: any) {
+      if (dbErr.code === '42703') {
+        result = await query<FinancialGoal>(
+          `INSERT INTO financial_goals 
+           (id, user_id, linked_member_id, linked_asset_id, name, goal_type, target_amount, 
+            current_amount, currency, target_date, target_age, monthly_contribution, priority, icon, color, notes)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+           RETURNING *`,
+          baseParams
+        );
+      } else {
+        throw dbErr;
+      }
+    }
     
     const goalWithMetrics = calculateGoalMetrics(result.rows[0]);
     
@@ -200,46 +209,77 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const data = goalSchema.partial().parse(req.body);
     
-    const result = await query<FinancialGoal>(
-      `UPDATE financial_goals SET
-        linked_member_id = COALESCE($1, linked_member_id),
-        linked_asset_id = COALESCE($2, linked_asset_id),
-        name = COALESCE($3, name),
-        goal_type = COALESCE($4, goal_type),
-        target_amount = COALESCE($5, target_amount),
-        current_amount = COALESCE($6, current_amount),
-        currency = COALESCE($7, currency),
-        target_date = COALESCE($8, target_date),
-        target_age = COALESCE($9, target_age),
-        monthly_contribution = COALESCE($10, monthly_contribution),
-        expected_return_rate = COALESCE($11, expected_return_rate),
-        priority = COALESCE($12, priority),
-        icon = COALESCE($13, icon),
-        color = COALESCE($14, color),
-        notes = COALESCE($15, notes),
-        updated_at = NOW()
-       WHERE id = $16 AND user_id = $17
-       RETURNING *`,
-      [
-        data.linked_member_id,
-        data.linked_asset_id,
-        data.name,
-        data.goal_type,
-        data.target_amount,
-        data.current_amount,
-        data.currency,
-        data.target_date,
-        data.target_age,
-        data.monthly_contribution,
-        data.expected_return_rate,
-        data.priority,
-        data.icon,
-        data.color,
-        data.notes,
-        req.params.id,
-        req.user!.id,
-      ]
-    );
+    // Build dynamic SET clause to handle optional columns gracefully
+    const fields: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+    
+    const addField = (col: string, val: any) => {
+      fields.push(`${col} = COALESCE($${idx}, ${col})`);
+      values.push(val);
+      idx++;
+    };
+    
+    addField('linked_member_id', data.linked_member_id);
+    addField('linked_asset_id', data.linked_asset_id);
+    addField('name', data.name);
+    addField('goal_type', data.goal_type);
+    addField('target_amount', data.target_amount);
+    addField('current_amount', data.current_amount);
+    addField('currency', data.currency);
+    addField('target_date', data.target_date);
+    addField('target_age', data.target_age);
+    addField('monthly_contribution', data.monthly_contribution);
+    addField('expected_return_rate', data.expected_return_rate ?? 0);
+    addField('priority', data.priority);
+    addField('icon', data.icon);
+    addField('color', data.color);
+    addField('notes', data.notes);
+    
+    fields.push('updated_at = NOW()');
+    values.push(req.params.id, req.user!.id);
+    
+    let result;
+    try {
+      result = await query<FinancialGoal>(
+        `UPDATE financial_goals SET ${fields.join(', ')}
+         WHERE id = $${idx} AND user_id = $${idx + 1}
+         RETURNING *`,
+        values
+      );
+    } catch (dbErr: any) {
+      if (dbErr.code === '42703') {
+        // Column doesn't exist yet (expected_return_rate) - retry without it
+        const fieldsNoReturn: string[] = [];
+        const valuesNoReturn: any[] = [];
+        let i = 1;
+        const add = (col: string, val: any) => { fieldsNoReturn.push(`${col} = COALESCE($${i}, ${col})`); valuesNoReturn.push(val); i++; };
+        add('linked_member_id', data.linked_member_id);
+        add('linked_asset_id', data.linked_asset_id);
+        add('name', data.name);
+        add('goal_type', data.goal_type);
+        add('target_amount', data.target_amount);
+        add('current_amount', data.current_amount);
+        add('currency', data.currency);
+        add('target_date', data.target_date);
+        add('target_age', data.target_age);
+        add('monthly_contribution', data.monthly_contribution);
+        add('priority', data.priority);
+        add('icon', data.icon);
+        add('color', data.color);
+        add('notes', data.notes);
+        fieldsNoReturn.push('updated_at = NOW()');
+        valuesNoReturn.push(req.params.id, req.user!.id);
+        result = await query<FinancialGoal>(
+          `UPDATE financial_goals SET ${fieldsNoReturn.join(', ')}
+           WHERE id = $${i} AND user_id = $${i + 1}
+           RETURNING *`,
+          valuesNoReturn
+        );
+      } else {
+        throw dbErr;
+      }
+    }
     
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'לא נמצא' });
