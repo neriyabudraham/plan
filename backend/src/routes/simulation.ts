@@ -494,7 +494,7 @@ router.post('/run', authenticate, async (req: AuthRequest, res: Response) => {
     
     const results = await runSimulation({
       userId: req.user!.id,
-      params,
+      params: params as SimulationParams,
       assets: assetsResult.rows,
       familyMembers: membersResult.rows,
       childExpenseItems,
@@ -695,7 +695,7 @@ router.post('/scenarios/:id/run', authenticate, async (req: AuthRequest, res: Re
     
     const results = await runSimulation({
       userId: req.user!.id,
-      params,
+      params: params as SimulationParams,
       assets: assetsResult.rows,
       familyMembers: membersResult.rows,
       childExpenseItems,
