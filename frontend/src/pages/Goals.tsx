@@ -78,11 +78,11 @@ export default function Goals() {
     setForm({
       name: goal.name,
       goal_type: goal.goal_type,
-      target_amount: goal.target_amount,
-      current_amount: goal.current_amount,
+      target_amount: Number(goal.target_amount) || 0,
+      current_amount: Number(goal.current_amount) || 0,
       target_date: goal.target_date?.split('T')[0] || '',
-      monthly_contribution: goal.monthly_contribution,
-      priority: goal.priority,
+      monthly_contribution: Number(goal.monthly_contribution) || 0,
+      priority: Number(goal.priority) || 5,
       linked_member_id: goal.linked_member_id || '',
       linked_asset_id: goal.linked_asset_id || '',
       icon: goal.icon,
@@ -97,6 +97,10 @@ export default function Goals() {
     try {
       const data = {
         ...form,
+        target_amount: Number(form.target_amount),
+        current_amount: Number(form.current_amount),
+        monthly_contribution: Number(form.monthly_contribution),
+        priority: Number(form.priority),
         target_date: form.target_date || undefined,
         linked_member_id: form.linked_member_id || undefined,
         linked_asset_id: form.linked_asset_id || undefined,
