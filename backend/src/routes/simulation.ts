@@ -137,8 +137,9 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
     assetBalances[asset.id] = Number(asset.current_balance);
   }
   
-  // Monthly simulation
+  // Monthly simulation - normalize to 1st of month for consistent recording
   const currentDate = new Date(startDate);
+  currentDate.setDate(1);
   
   while (currentDate <= endDate) {
     const month = currentDate.getMonth();
@@ -326,39 +327,30 @@ async function runSimulation(ctx: SimulationContext): Promise<SimulationResults>
       }
     }
     
-    // Record monthly state (only every month or at key dates)
+    // Record monthly state
     const totalAssets = Object.values(assetBalances).reduce((sum, bal) => sum + bal, 0);
+    const baseMonthlyIncome = getIncomeAtDate(incomeHistory, currentDate);
+    const nominalMonthlyIncome = baseMonthlyIncome * inflationFactor;
+    const realMonthlyIncome = baseMonthlyIncome;
+    const totalAssetsReal = totalAssets / inflationFactor;
     
-    // Record at first day of each month
-    if (currentDate.getDate() === 1 || currentDate.getTime() === startDate.getTime()) {
-      // Calculate monthly income at this date
-      const baseMonthlyIncome = getIncomeAtDate(incomeHistory, currentDate);
-      // Nominal income = base income adjusted for future inflation (what you'll actually get paid)
-      const nominalMonthlyIncome = baseMonthlyIncome * inflationFactor;
-      // Real income = same purchasing power as today (base income stays same in real terms)
-      const realMonthlyIncome = baseMonthlyIncome;
-      
-      // Real value = nominal value / inflation factor (what it's worth in today's money)
-      const totalAssetsReal = totalAssets / inflationFactor;
-      
-      timeline.push({
-        date: dateStr,
-        total_assets: Math.round(totalAssets),
-        total_assets_real: Math.round(totalAssetsReal),
-        total_deposits: Math.round(totalDeposits),
-        total_withdrawals: Math.round(totalWithdrawals),
-        total_returns: Math.round(totalReturns),
-        total_fees: Math.round(totalFees),
-        total_child_expenses: Math.round(totalChildExpenses),
-        monthly_income: Math.round(nominalMonthlyIncome),
-        monthly_income_real: Math.round(realMonthlyIncome),
-        inflation_factor: Math.round(inflationFactor * 1000) / 1000,
-        assets_breakdown: Object.fromEntries(
-          Object.entries(assetBalances).map(([id, bal]) => [id, Math.round(bal)])
-        ),
-        events,
-      });
-    }
+    timeline.push({
+      date: dateStr,
+      total_assets: Math.round(totalAssets),
+      total_assets_real: Math.round(totalAssetsReal),
+      total_deposits: Math.round(totalDeposits),
+      total_withdrawals: Math.round(totalWithdrawals),
+      total_returns: Math.round(totalReturns),
+      total_fees: Math.round(totalFees),
+      total_child_expenses: Math.round(totalChildExpenses),
+      monthly_income: Math.round(nominalMonthlyIncome),
+      monthly_income_real: Math.round(realMonthlyIncome),
+      inflation_factor: Math.round(inflationFactor * 1000) / 1000,
+      assets_breakdown: Object.fromEntries(
+        Object.entries(assetBalances).map(([id, bal]) => [id, Math.round(bal)])
+      ),
+      events,
+    });
     
     // Move to next month
     currentDate.setMonth(currentDate.getMonth() + 1);
